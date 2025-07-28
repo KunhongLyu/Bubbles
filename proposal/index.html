@@ -1,0 +1,90 @@
+<html>
+<head>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=default'></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+    <style>
+        h1 {
+            text-align: center;
+        }
+
+        .container {
+            margin: 0 auto;
+            padding: 60px 20%;
+        }
+
+        figure {
+            text-align: center;
+        }
+
+        img {
+            display: inline-block;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>CS184 Spring 2025 Final Project: Realistic Bubble Simulation</h1>
+        <div style="text-align: center;">Names: Carl Sun, Isebella Hu, Kunhong Lyu, Sophia Liu</div>
+
+        <h2>Overview</h2>
+        In this project, we aim to create a realistic soap bubble simulation, capturing their dynamic motion under surface tension and rendering their iconic iridescent, rainbow-like appearance with ray tracing based techniques.
+
+        <h2>Description</h2>
+        In this project, we aim to create a realistic soap bubble simulation and render the characteristic iridescent surface appearance.
+
+        This problem is important for applications in animations, films, video games, virtual reality experiences, and scientific simulations.
+        Having a realistic simulation enhances visual realism and is especially important for creating an immersive experience.
+        Traditional methods fall short in handling thin-film behaviors, and more realistic simulation will lead to a more lifelike renderings that integrate seamlessly with other elements like water or air flows.
+
+        Soap bubbles are fascinating due to their fragile, fluid-like behavior and optical properties, but simulating them accurately poses significant challenges in computer graphics and physics-based animation.
+        Traditional fluid solvers focuses on bulk flows and viscosity, often simplifying and overlooking the role of surface tension, which is the dominant force in thin films, which leads to unrealistic deformations or high computational costs for micro-scale effects.
+
+        Our approach involves deriving a model for the dynamics based on reducing the degree of freedom from Navier Stoke's equation, using techniques such as hyperbolic geometric flows, as outlined in key papers, combined with ray tracing for physically accurate iridescence.
+
+        <h2>Goals and Deliverables</h2>
+        <p>
+            Our goal is to create a short 2-3 second video of a realistic rendering of soap bubble oscillating in air, rendered with the characteristic iridescent surface with rainbow coloring.
+            This includes implementing the core dynamics model for surface tension-driven motion.
+            We believe this is achievable as we can build it directly on the Ishida 2017 paper and our class knowledge of ray tracing.
+        </p>
+        <p>
+            If time allows, we will try to incoperate two-way coupling for air-bubble interactions, having non-manifold junctions between multiple touching bubbles, and allowing bubbles to interact with rigid bodies.
+            Additionally, we aim to make this simulation able to run and interactive in real-time.
+        </p>
+
+        <h2>Schedule</h2>
+        <p>
+            For our first week, we should read and understand key papers, select libraries and set up development environment we will be using for the project, and start on coding the simulation and the ray tracing component.
+        </p>
+        <p>
+            For our second week, we should be done with writing the code, fixing the code based on visual results and be ready to have polished code by the end of the second week.
+        </p>
+        <p>
+            For our third week, we will focus on integrating the simulation with ray tracing for rendering, testing visual outputs, and iterating on parameters for realism.
+            This includes debugging the iridescence effects and finalizing the videos deliverable.
+        </p>
+
+        <h2>Resources</h2>
+        Our project will be largely based on the paper
+        <ul>
+            <li>A Hyperbolic Geometric Flow for Evolving Films and Foams (Ishida 2017)</li>
+        </ul>
+        while borrow inspiration from other papers
+        <ul>
+            <li>A Model for Soap Film Dynamics with Evolving Thickness (Ishida 2020)</li>
+            <li>Thin-Film Smoothed Particle Hydrodynamics Fluid (MengDi Wang 2021)</li>
+        </ul>
+        where these paper will give a model of the dynamics and the material of soap bubble.
+
+
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+<script>
+    // automatically find and highlight all <pre><code class="language-cpp"> blocks
+    hljs.highlightAll();
+</script>
+</html>
