@@ -67,7 +67,7 @@ namespace CGL {
         void mouse2_dragged(float x, float y);  // Right Mouse Dragged.
         void mouse_moved(float x, float y);     // Mouse Moved.
 
-        // HUD //
+        // HUD
         bool show_hud;
         void draw_hud();
         inline void draw_string(float x, float y,
@@ -76,5 +76,6 @@ namespace CGL {
     }; // class Application
 
 } // namespace CGL
+
 
 #endif // CGL_APPLICATION_H

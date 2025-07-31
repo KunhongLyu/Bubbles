@@ -2,7 +2,7 @@
 #include "CGL/CGL.h"
 #include "CGL/viewer.h"
 
-#include "application/application.h"
+#include "application.h"
 
 
 using namespace CGL;

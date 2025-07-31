@@ -39,7 +39,9 @@ namespace CGL {
     }
 
     void Application::render() {
-
+        glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        draw_hud();
     }
 
     void Application::resize(size_t w, size_t h) {
@@ -179,7 +181,7 @@ namespace CGL {
         const int inc = use_hdpi ? 48 : 24;
         float y0 = y + inc - size;
 
-        Color text_color = Color::White;
+        Color text_color = Color::Black;
         draw_string(x0, y0, "Hello world", size, text_color);
 
 

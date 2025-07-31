@@ -21,28 +21,36 @@ endif()
 #-------------------------------------------------------------------------------
 set(APPLICATION_SOURCE
     src/main.cpp
-    src/application/application.cpp)
+    src/application.cpp
+)
 
 set(APPLICATION_HEADERS
-    src/application/application.h)
+    src/application.h
+    src/util/Shader.h
+)
+
+set(GL_UTILS_SOURCE
+    src/util/Shader.cpp
+)
 
 if (WIN32)
     list(APPEND APPLICATION_SOURCE src/util/win32/getopt.c)
 endif()
 
-#if (WIN32 OR APPLE)
-#  add_library(pt31 STATIC ${APPLICATION_3_1_SOURCE} ${APPLICATION_HEADERS})
-#else()
-#  add_library(pt31 SHARED ${APPLICATION_3_1_SOURCE} ${APPLICATION_HEADERS})
-#endif()
 
-#target_include_directories(pt31 PUBLIC src)
+if (WIN32 OR APPLE)
+    add_library(gl_utils STATIC ${GL_UTILS_SOURCE} ${APPLICATION_HEADERS})
+else()
+    add_library(gl_utils SHARED ${GL_UTILS_SOURCE} ${APPLICATION_HEADERS})
+endif()
+
+target_include_directories(gl_utils PUBLIC src)
 
 add_executable(bubble ${APPLICATION_SOURCE} ${APPLICATION_HEADERS})
 target_include_directories(bubble PUBLIC src)
 
-#target_link_libraries(pt31 PUBLIC CGL)
-target_link_libraries(bubble PUBLIC CGL)
+target_link_libraries(gl_utils PUBLIC CGL)
+target_link_libraries(bubble PUBLIC gl_utils)
 
 set(CGL_INCLUDE_DIRS CGL/include CGL/deps/glew/include CGL/deps/glfw/include src/imgui src/imgui/backends)
 
@@ -50,7 +58,7 @@ set(CGL_INCLUDE_DIRS CGL/include CGL/deps/glew/include CGL/deps/glfw/include src
 # Find dependencies
 #-------------------------------------------------------------------------------
 add_subdirectory(CGL)
-#target_include_directories(pt31 PUBLIC ${CGL_INCLUDE_DIRS})
+target_include_directories(gl_utils PUBLIC ${CGL_INCLUDE_DIRS})
 target_include_directories(bubble PUBLIC ${CGL_INCLUDE_DIRS})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CGL_CXX_FLAGS}")
 
