@@ -13,10 +13,10 @@ namespace CGL {
 
     class Shader {
     public:
-        Shader(std::string vsFileName, std::string fsFileName);
+        Shader(const std::string &vsFileName, const std::string &fsFileName);
         ~Shader();
 
-        GLint uniformLocation(std::string varName) const;
+        GLint uniformLocation(const std::string &varName) const;
 
         void setVec1(GLint loc, float f);
         void setVec2(GLint loc, Vector2D v);

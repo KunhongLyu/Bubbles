@@ -9,87 +9,86 @@ project(Bubble)
 option(BUILD_DEBUG     "Build with debug settings"    OFF)
 option(BUILD_DOCS      "Build documentation"          OFF)
 
-
 set(BUILD_DEBUG ${BUILD_DEBUG} CACHE BOOL "Build debug" FORCE)
 
 if (BUILD_DEBUG)
   set(CMAKE_BUILD_TYPE Debug)
 endif()
 
+
+
+
 #-------------------------------------------------------------------------------
-# Set target
+# Source files
 #-------------------------------------------------------------------------------
-set(APPLICATION_SOURCE
-    src/main.cpp
-    src/application.cpp
-)
+file(GLOB_RECURSE APPLICATION_SOURCE "src/*.cpp")
 
-set(APPLICATION_HEADERS
-    src/application.h
-    src/util/Shader.h
-    
-    src/pathtracer/random_util.h
-    src/pathtracer/bvh.h
-    src/pathtracer/intersection.h
-    src/pathtracer/primitive.h
-    src/pathtracer/bbox.h
-    src/pathtracer/triangle.h
-    src/pathtracer/ray.h
-    src/pathtracer/bsdf.h
-    src/pathtracer/sampler.h
-)
-
-set(GL_UTILS_SOURCE
-    src/util/Shader.cpp
-)
-
-set(PATH_TRACER_SOURCE
-    src/pathtracer/bvh.cpp
-    src/pathtracer/bbox.cpp
-    src/pathtracer/triangle.cpp
-    src/pathtracer/bsdf.cpp
-    src/pathtracer/advanced_bsdf.cpp
-    src/pathtracer/sampler.cpp
-)
+file(GLOB_RECURSE APPLICATION_HEADERS "*.h")
 
 if (WIN32)
     list(APPEND APPLICATION_SOURCE src/util/win32/getopt.c)
 endif()
 
+file(GLOB SHADER_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/util/Shaders/*)
 
-if (WIN32 OR APPLE)
-    add_library(gl_utils STATIC ${GL_UTILS_SOURCE} ${APPLICATION_HEADERS})
-    add_library(pathtracer STATIC ${PATH_TRACER_SOURCE} ${APPLICATION_HEADERS})
-else()
-    add_library(gl_utils SHARED ${GL_UTILS_SOURCE} ${APPLICATION_HEADERS})
-    add_library(pathtracer SHARED ${PATH_TRACER_SOURCE} ${APPLICATION_HEADERS})
-endif()
 
-target_include_directories(gl_utils PUBLIC src)
-target_include_directories(pathtracer PUBLIC src)
-
+#-------------------------------------------------------------------------------
+# Create final program
+#-------------------------------------------------------------------------------
 add_executable(bubble ${APPLICATION_SOURCE} ${APPLICATION_HEADERS})
+
+
+#-------------------------------------------------------------------------------
+# Create final program
+#-------------------------------------------------------------------------------
 target_include_directories(bubble PUBLIC src)
 
-target_link_libraries(gl_utils PUBLIC CGL)
-target_link_libraries(pathtracer PUBLIC CGL)
-target_link_libraries(bubble PUBLIC pathtracer)
-target_link_libraries(bubble PUBLIC gl_utils)
 
+#-------------------------------------------------------------------------------
+# Find include directories
+#-------------------------------------------------------------------------------
 set(CGL_INCLUDE_DIRS CGL/include CGL/deps/glew/include CGL/deps/glfw/include src/imgui src/imgui/backends)
 
-#-------------------------------------------------------------------------------
-# Find dependencies
-#-------------------------------------------------------------------------------
 add_subdirectory(CGL)
-target_include_directories(gl_utils PUBLIC ${CGL_INCLUDE_DIRS})
 target_include_directories(bubble PUBLIC ${CGL_INCLUDE_DIRS})
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CGL_CXX_FLAGS}")
 
+
+
+#-------------------------------------------------------------------------------
+# Link libraries
+#-------------------------------------------------------------------------------
+target_link_libraries(bubble PUBLIC CGL)
 set(OpenGL_GL_PREFERENCE LEGACY)
 find_package(OpenGL REQUIRED)
 target_link_libraries(bubble PUBLIC OpenGL::GL)
 target_link_libraries(bubble PUBLIC OpenGL::GLU)
+
+
+
+#-------------------------------------------------------------------------------
+# Copy shader files
+#-------------------------------------------------------------------------------
+add_custom_target(copy_shaders)
+foreach(shader_file IN LISTS SHADER_FILES)
+    get_filename_component(filename ${shader_file} NAME)
+    set(output_file ${CMAKE_BINARY_DIR}/Shaders/${filename})
+    
+    add_custom_command(
+        TARGET copy_shaders
+        PRE_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${shader_file} ${output_file}
+        COMMENT "Copying shader ${filename} if changed"
+        VERBATIM
+    )
+endforeach()
+add_dependencies(bubble copy_shaders)
+
+
+
+
+
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CGL_CXX_FLAGS}")
 
 #-------------------------------------------------------------------------------
 # Add subdirectories

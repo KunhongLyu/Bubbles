@@ -14,6 +14,9 @@
 #include "CGL/renderer.h"
 #include "CGL/osdtext.h"
 
+#include "util/MeshBuffer.h"
+#include "util/Shader.h"
+
 
 using namespace std;
 
@@ -43,6 +46,11 @@ namespace CGL {
 
         size_t screenW;
         size_t screenH;
+
+        MeshBuffer *quad;
+        Shader *quadShader;
+
+        MeshBuffer *cube;
 
         float mouseX, mouseY;
         enum e_mouse_button {

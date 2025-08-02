@@ -23,31 +23,42 @@ namespace CGL {
         if (file.is_open()) {
             size_t length = getFileLength(filename);
             file.read(buffer, length);
-            buffer[length] = 0;
+            buffer[length - 1] = 0;
         }
     }
 
-    void compileShaderFromFile(std::string fileName, GLint shaderID) {
+    void compileShaderFromFile(const std::string &fileName, GLint shaderID) {
         size_t fileSz = getFileLength(fileName);
         char *source = new char[fileSz];
         fillBufferWithFileContent(fileName, source);
         glShaderSource(shaderID, 1, &source, NULL);
         glCompileShader(shaderID);
         delete[] source;
+
+        GLint success;
+        char infoLog[512];
+        glGetShaderiv(shaderID, GL_COMPILE_STATUS, &success);
+        if (!success)
+        {
+            glGetShaderInfoLog(shaderID, 512, NULL, infoLog);
+            std::cout << "Error creating shader!" << std::endl << "Error message: " << infoLog << std::endl;
+        }
     }
 
-    Shader::Shader(std::string vsFileName, std::string fsFileName) {
+    Shader::Shader(const std::string &vsFileName, const std::string &fsFileName) {
         vs = glCreateShader(GL_VERTEX_SHADER);
         compileShaderFromFile(vsFileName, vs);
 
         fs = glCreateShader(GL_FRAGMENT_SHADER);
         compileShaderFromFile(fsFileName, fs);
 
-        unsigned int shaderProgram = glCreateProgram();
-        glAttachShader(shaderProgram, vs);
-        glAttachShader(shaderProgram, fs);
-        glLinkProgram(shaderProgram);
+        program = glCreateProgram();
+        glAttachShader(program, vs);
+        glAttachShader(program, fs);
+        glLinkProgram(program);
 
+        glDetachShader(program, vs);
+        glDetachShader(program, fs);
         glDeleteShader(vs);
         glDeleteShader(fs);
     }
@@ -61,7 +72,7 @@ namespace CGL {
     }
 
 
-    GLint Shader::uniformLocation(std::string varName) const {
+    GLint Shader::uniformLocation(const std::string &varName) const {
         return glGetUniformLocation(program, varName.c_str());
     }
 

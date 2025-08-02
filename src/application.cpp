@@ -6,7 +6,14 @@ namespace CGL {
     }
 
     Application::~Application() {
-
+        if (quadShader) {
+            delete quadShader;
+            quadShader = NULL;
+        }
+        if (quad) {
+            delete quad;
+            quad = NULL;
+        }
     }
 
     void Application::init() {
@@ -24,18 +31,80 @@ namespace CGL {
 
         show_hud = true;
 
-        // Lighting needs to be explicitly enabled.
-        glEnable(GL_LIGHTING);
-
-        // Enable anti-aliasing and circular points.
-        glEnable(GL_LINE_SMOOTH);
-        glEnable(GL_POLYGON_SMOOTH);
-        glEnable(GL_POINT_SMOOTH);
-        glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-        glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
-        glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);
 
         screenW = 800; screenH = 600;
+
+        quadShader = new Shader("Shaders/quad.vert", "Shaders/quad.frag");
+
+        
+        std::vector<ShaderInput> quadInputFormat;
+        quadInputFormat.push_back({ Type_Float , 2 });
+
+        float vertices[] = {
+            -1,  1,
+             1,  1,
+             1, -1,
+            -1, -1, };
+        uint32_t indices[] = { 0, 2, 1, 0, 3, 2 };
+        
+        quad = new MeshBuffer(quadInputFormat, vertices, 4, indices, Type_UInt, 6, Usage_StaticDraw, Usage_StaticDraw);
+
+
+        float cubeVert[] = {
+            // Front face (z = -0.5, normal = 0, 0, -1)
+            0.5f, -0.5f, -0.5f,  0.0f, 0.0f, -1.0f,  // 0
+            0.5f, -0.5f, -0.5f,  0.0f, 0.0f, -1.0f,  // 1
+            0.5f,  0.5f, -0.5f,  0.0f, 0.0f, -1.0f,  // 2
+            0.5f,  0.5f, -0.5f,  0.0f, 0.0f, -1.0f,  // 3
+
+            // Back face (z = 0.5, normal = 0, 0, 1)
+            0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,   // 4
+            0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,   // 5
+            0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,   // 6
+            0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,   // 7
+
+            // Left face (x = -0.5, normal = -1, 0, 0)
+            0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f,   // 8
+            0.5f,  0.5f, -0.5f, -1.0f, 0.0f, 0.0f,   // 9
+            0.5f,  0.5f,  0.5f, -1.0f, 0.0f, 0.0f,   // 10
+            0.5f, -0.5f,  0.5f, -1.0f, 0.0f, 0.0f,   // 11
+
+            // Right face (x = 0.5, normal = 1, 0, 0)
+            0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,   // 12
+            0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 0.0f,   // 13
+            0.5f,  0.5f,  0.5f,  1.0f, 0.0f, 0.0f,   // 14
+            0.5f,  0.5f, -0.5f,  1.0f, 0.0f, 0.0f,   // 15
+
+            // Bottom face (y = -0.5, normal = 0, -1, 0)
+            -0.5f, -0.5f, -0.5f,  0.0f, -1.0f, 0.0f,  // 16
+             0.5f, -0.5f, -0.5f,  0.0f, -1.0f, 0.0f,  // 17
+             0.5f, -0.5f,  0.5f,  0.0f, -1.0f, 0.0f,  // 18
+            -0.5f, -0.5f,  0.5f,  0.0f, -1.0f, 0.0f,  // 19
+
+            // Top face (y = 0.5, normal = 0, 1, 0)
+            -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.0f,   // 20
+             0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.0f,   // 21
+             0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 0.0f,   // 22
+            -0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 0.0f    // 23
+        };
+        uint32_t cubeIndices[] = {// Front
+            0, 1, 2,   0, 2, 3,
+            // Back
+            4, 5, 6,   4, 6, 7,
+            // Left
+            8, 9, 10,  8, 10, 11,
+            // Right
+            12, 13, 14, 12, 14, 15,
+            // Bottom
+            16, 17, 18, 16, 18, 19,
+            // Top
+            20, 21, 22, 20, 22, 23 };
+
+        vector<ShaderInput> cubeInputFormat;
+        cubeInputFormat.push_back({ Type_Float , 3 });
+        cubeInputFormat.push_back({ Type_Float , 3 });
+
+        cube = new MeshBuffer(cubeInputFormat, cubeVert, 24, cubeIndices, Type_UInt, 36, Usage_StaticDraw, Usage_StaticDraw);
     }
 
     void Application::render() {
@@ -177,9 +246,9 @@ namespace CGL {
 
         const size_t size = 16;
         const float x0 = use_hdpi ? screenW - 300 * 2 : screenW - 300;
-        const float y = use_hdpi ? 128 : 64;
+        const float y0 = use_hdpi ? 128 : 64;
         const int inc = use_hdpi ? 48 : 24;
-        float y0 = y + inc - size;
+        float y = y0 + inc - size;
 
         Color text_color = Color::Black;
         draw_string(x0, y0, "Hello world", size, text_color);
@@ -187,22 +256,8 @@ namespace CGL {
 
         // -- First draw a lovely black rectangle.
 
-        glPushAttrib(GL_VIEWPORT_BIT);
-        glViewport(0, 0, screenW, screenH);
-
-        glMatrixMode(GL_PROJECTION);
-        glPushMatrix();
-        glLoadIdentity();
-        glOrtho(0, screenW, screenH, 0, 0, 1);
-
-        glMatrixMode(GL_MODELVIEW);
-        glPushMatrix();
-        glLoadIdentity();
-        glTranslatef(0, 0, -1);
 
         // -- Black with opacity .8;
-
-        glColor4f(0.0, 0.0, 0.0, 0.8);
 
         float min_x = x0 - 32;
         float min_y = y0 - 32;
@@ -212,26 +267,22 @@ namespace CGL {
         float z = 0.0;
 
         glDisable(GL_DEPTH_TEST);
-        glDisable(GL_LIGHTING);
+        glDisable(GL_CULL_FACE);
 
-        glBegin(GL_QUADS);
 
-        glVertex3f(min_x, min_y, z);
-        glVertex3f(min_x, max_y, z);
-        glVertex3f(max_x, max_y, z);
-        glVertex3f(max_x, min_y, z);
-        glEnd();
+        GLint colorloc = quadShader->uniformLocation("color");
+        quadShader->setVec4(colorloc, 0.0, 0.0, 0.0, 0.8);
+        GLint leftloc = quadShader->uniformLocation("left");
+        GLint rightloc = quadShader->uniformLocation("right");
+        GLint toploc = quadShader->uniformLocation("top");
+        GLint bottomloc = quadShader->uniformLocation("bottom");
+        quadShader->setVec1(leftloc, 2 * min_x / screenW - 1);
+        quadShader->setVec1(rightloc, 2 * max_x / screenW - 1);
+        quadShader->setVec1(bottomloc, 1 - 2 * min_y / screenH);
+        quadShader->setVec1(toploc, 1 - 2 * max_y / screenH);
 
-        glMatrixMode(GL_PROJECTION);
-        glPopMatrix();
-
-        glMatrixMode(GL_MODELVIEW);
-        glPopMatrix();
-
-        glPopAttrib();
-
-        glEnable(GL_LIGHTING);
-        glEnable(GL_DEPTH_TEST);
+        quadShader->useProgram();
+        quad->draw();
 
         textManager.render();
     }

@@ -220,6 +220,7 @@ void OSDText::draw_line(OSDLine line) {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
   // set up the VBO for our vertex data
+  glBindVertexArray(0);
   glEnableVertexAttribArray(attribute_coord);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
   glVertexAttribPointer(attribute_coord, 4, GL_FLOAT, GL_FALSE, 0, 0);
