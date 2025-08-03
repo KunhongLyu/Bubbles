@@ -54,10 +54,11 @@ namespace CGL {
         size_t curSize = 0;
         for (size_t i = 0; i < inputFormat.size(); i++) {
             auto type = inputFormat[i];
-            glVertexAttribPointer(i, type.count, type.type, 0, sizePerVertex, (void *)curSize);
+            glVertexAttribPointer(i, type.count, type.type, GL_FALSE, sizePerVertex, (void *)curSize);
             err = glGetError();
             glEnableVertexAttribArray(i);
             err = glGetError();
+            curSize += type.count * typeSize(type.type);
         }
 
         // Bind and fill EBO with indices
@@ -86,6 +87,7 @@ namespace CGL {
     void MeshBuffer::draw() const {
         glBindVertexArray(vao);
         glDrawElements(GL_TRIANGLES, indexCount, indexFormat, NULL);
+        glBindVertexArray(0);
     }
 
 

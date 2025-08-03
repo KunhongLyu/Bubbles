@@ -2,9 +2,7 @@
 #define CGL_RAY_H
 
 #include "CGL/CGL.h"
-#include "CGL/vector3D.h"
-#include "CGL/vector4D.h"
-#include "CGL/matrix4x4.h"
+#include "CGL/CGLMath.h"
 
 #define PART 5
 

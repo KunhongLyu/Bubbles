@@ -54,7 +54,7 @@ public:
    * Initializes to vector (c,c,c,c)
    */
 #ifdef __AVX__
-  Vector4D(double c) { xy = _mm_set1_pd(c); zw = _mm_set1_pd(1); }
+  Vector4D(double c) { xy = _mm_set1_pd(c); zw = _mm_set1_pd(c); }
 #else
   Vector4D(double c) : x(c), y(c), z(c), w(c) {}
 #endif
@@ -263,4 +263,4 @@ std::ostream& operator<<( std::ostream& os, const Vector4D& v );
 
 } // namespace CGL
 
-#endif // CGL_VECTOR3D_H
+#endif // CGL_VECTOR4D_H

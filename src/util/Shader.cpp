@@ -3,11 +3,7 @@
 #include <fstream>
 
 #include "CGL/CGL.h"
-#include "CGL/vector2d.h"
-#include "CGL/vector3d.h"
-#include "CGL/vector4d.h"
-#include "CGL/matrix3x3.h"
-#include "CGL/matrix4x4.h"
+#include "CGL/CGLMath.h"
 
 namespace CGL {
 
@@ -70,6 +66,9 @@ namespace CGL {
     void Shader::useProgram() const {
         glUseProgram(program);
     }
+    void Shader::removeProgram() {
+        glUseProgram(0);
+    }
 
 
     GLint Shader::uniformLocation(const std::string &varName) const {
@@ -80,6 +79,7 @@ namespace CGL {
     void Shader::setVec1(GLint loc, float f) {
         glUseProgram(program);
         glUniform1f(loc, f);
+        glUseProgram(0);
     }
     void Shader::setVec2(GLint loc, Vector2D v) {
         setVec2(loc, static_cast<float>(v.x), static_cast<float>(v.y));
@@ -87,6 +87,7 @@ namespace CGL {
     void Shader::setVec2(GLint loc, float f0, float f1) {
         glUseProgram(program);
         glUniform2f(loc, f0, f1);
+        glUseProgram(0);
     }
     void Shader::setVec3(GLint loc, Vector3D v) {
         setVec3(loc, static_cast<float>(v.x), static_cast<float>(v.y), static_cast<float>(v.z));
@@ -101,6 +102,7 @@ namespace CGL {
     void Shader::setVec4(GLint loc, float f0, float f1, float f2, float f3) {
         glUseProgram(program);
         glUniform4f(loc, f0, f1, f2, f3);
+        glUseProgram(0);
     }
 
     void Shader::setMat3x3(GLint loc, Matrix3x3 m) {
@@ -111,6 +113,7 @@ namespace CGL {
             static_cast<float>(m[2].x), static_cast<float>(m[2].y), static_cast<float>(m[2].z),
         };
         glUniformMatrix3fv(loc, 1, GL_FALSE, entries);
+        glUseProgram(0);
 
     }
     void Shader::setMat4x4(GLint loc, Matrix4x4 m) {
@@ -122,5 +125,6 @@ namespace CGL {
             static_cast<float>(m[3].x), static_cast<float>(m[3].y), static_cast<float>(m[3].z), static_cast<float>(m[3].w),
         };
         glUniformMatrix4fv(loc, 1, GL_FALSE, entries);
+        glUseProgram(0);
     }
 }

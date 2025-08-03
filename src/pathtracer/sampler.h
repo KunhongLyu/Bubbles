@@ -2,7 +2,7 @@
 #define CGL_SAMPLER_H
 
 #include "CGL/vector2D.h"
-#include "CGL/vector3D.h"
+#include "CGL/CGLMath.h"
 #include "CGL/misc.h"
 #include "random_util.h"
 

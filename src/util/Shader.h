@@ -30,8 +30,9 @@ namespace CGL {
         void setMat4x4(GLint loc, Matrix4x4 m);
 
         void useProgram() const;
+        static void removeProgram();
 
-    private:
+    public:
         GLuint vs, fs;
         GLuint program;
     };

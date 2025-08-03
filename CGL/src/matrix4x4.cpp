@@ -129,7 +129,7 @@ Matrix4x4 Matrix4x4::operator*(const Matrix4x4 &B) const {
   for (int i = 0; i < 4; i++) {
     for (int j = 0; j < 4; j++) {
 #ifdef __AVX__
-      C(i, j) = dot(A[i], Vector4D(B(0, j), B(1, j), B(2, j), B(3, j)));
+      C(i, j) = dot(Vector4D(A(i, 0), A(i, 1), A(i, 2), A(i, 3)), B[j]);
 #else
       C(i, j) = 0.;
 
@@ -230,6 +230,76 @@ void Matrix4x4::operator/=(double x) {
     for (int j = 0; j < 4; j++) {
       A(i, j) *= rx;
     }
+}
+
+
+Matrix4x4 Matrix4x4::perspective(double fovy, double aspect, double near, double far) {
+    Matrix4x4 m;
+    m.zero(0.0);
+
+    double theta = fovy / 2.0;
+    double cot_theta = 1.0 / tan(theta);
+
+    m(0, 0) = cot_theta / aspect;
+    m(1, 1) = cot_theta;
+    m(2, 2) = -(far + near) / (far - near);
+    m(2, 3) = -2 * far * near / (far - near);
+    m(3, 2) = -1.0;
+
+    return m;
+}
+
+Matrix4x4 Matrix4x4::lookAt(const Vector3D &eye, const Vector3D &at, const Vector3D &up) {
+    Vector3D f = (at - eye).unit();
+    Vector3D s = cross(f, up).unit();
+    Vector3D u = cross(s, f);
+
+    Matrix4x4 m;
+    m.column(0) = Vector4D(s.x, u.x, -f.x, 0);
+    m.column(1) = Vector4D(s.y, u.y, -f.y, 0);
+    m.column(2) = Vector4D(s.z, u.z, -f.z, 0);
+    m.column(3) = Vector4D(-dot(s, eye), -dot(u, eye), dot(f, eye), 1.0);
+
+    return m;
+}
+
+Matrix4x4 Matrix4x4::rotateX(double r) {
+    Matrix4x4 m;
+    double c = cos(r);
+    double s = sin(r);
+    m.entries[0] = Vector4D(1, 0, 0, 0);
+    m.entries[1] = Vector4D(0, c, s, 0);
+    m.entries[2] = Vector4D(0, -s, c, 0);
+    m.entries[3] = Vector4D(0, 0, 0, 1);
+    return m;
+}
+Matrix4x4 Matrix4x4::rotateY(double r) {
+    Matrix4x4 m;
+    double c = cos(r);
+    double s = sin(r);
+    m.entries[0] = Vector4D(c, 0, s, 0);
+    m.entries[1] = Vector4D(0, 1, 0, 0);
+    m.entries[2] = Vector4D(-s, 0, c, 0);
+    m.entries[3] = Vector4D(0, 0, 0, 1);
+    return m;
+}
+Matrix4x4 Matrix4x4::rotateZ(double r) {
+    Matrix4x4 m;
+    double c = cos(r);
+    double s = sin(r);
+    m.entries[0] = Vector4D(c, s, 0, 0);
+    m.entries[1] = Vector4D(-s, c, 0, 0);
+    m.entries[2] = Vector4D(0, 0, 1, 0);
+    m.entries[3] = Vector4D(0, 0, 0, 1);
+    return m;
+}
+Matrix4x4 Matrix4x4::translation(double x, double y, double z) {
+    Matrix4x4 m;
+    m.entries[0] = Vector4D(1, 0, 0, 0);
+    m.entries[1] = Vector4D(0, 1, 0, 0);
+    m.entries[2] = Vector4D(0, 0, 1, 0);
+    m.entries[3] = Vector4D(x, y, z, 1);
+    return m;
 }
 
 Matrix4x4 Matrix4x4::identity(void) {

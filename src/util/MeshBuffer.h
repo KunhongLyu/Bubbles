@@ -7,9 +7,7 @@
 #include "GL/glew.h"
 
 #include "CGL/CGL.h"
-#include "CGL/vector2d.h"
-#include "CGL/vector3d.h"
-#include "CGL/vector4d.h"
+#include "CGL/CGLMath.h"
 
 
 namespace CGL {

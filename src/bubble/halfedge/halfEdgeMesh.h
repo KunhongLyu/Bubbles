@@ -147,11 +147,7 @@
 #include <iostream>
 
 #include "CGL/CGL.h"  // Standard 462 Vectors, etc.
-#include "CGL/vector2d.h"
-#include "CGL/vector3d.h"
-#include "CGL/vector4d.h"
-#include "CGL/matrix3x3.h"
-#include "CGL/matrix4x4.h"
+#include "CGL/CGLMath.h"
 
 using namespace std;
 using namespace CGL;

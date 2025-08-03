@@ -2,8 +2,7 @@
 #define CGL_STATICSCENE_BSDF_H
 
 #include "CGL/CGL.h"
-#include "CGL/vector3D.h"
-#include "CGL/matrix3x3.h"
+#include "CGL/CGLMath.h"
 
 #include "sampler.h"
 

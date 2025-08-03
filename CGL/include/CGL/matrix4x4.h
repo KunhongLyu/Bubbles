@@ -110,6 +110,15 @@ class Matrix4x4 {
   // divides each element by x
   void operator/=( double x );
 
+  static Matrix4x4 perspective(double fovy, double aspect, double near, double far);
+
+  static Matrix4x4 lookAt(const Vector3D &eye, const Vector3D &center, const Vector3D &up);
+
+  static Matrix4x4 rotateX(double r);
+  static Matrix4x4 rotateY(double r);
+  static Matrix4x4 rotateZ(double r);
+  static Matrix4x4 translation(double x, double y, double z);
+
   protected:
 
   // 4 by 4 matrices are represented by an array of 4 column vectors.

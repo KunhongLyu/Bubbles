@@ -3,7 +3,7 @@
 
 #include <vector>
 
-#include "CGL/vector3D.h"
+#include "CGL/CGLMath.h"
 #include "CGL/misc.h"
 
 #include "bsdf.h"

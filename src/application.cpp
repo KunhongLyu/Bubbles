@@ -52,40 +52,40 @@ namespace CGL {
 
         float cubeVert[] = {
             // Front face (z = -0.5, normal = 0, 0, -1)
-            0.5f, -0.5f, -0.5f,  0.0f, 0.0f, -1.0f,  // 0
-            0.5f, -0.5f, -0.5f,  0.0f, 0.0f, -1.0f,  // 1
-            0.5f,  0.5f, -0.5f,  0.0f, 0.0f, -1.0f,  // 2
-            0.5f,  0.5f, -0.5f,  0.0f, 0.0f, -1.0f,  // 3
+            -0.5f,  0.5f, -0.5f,  0.0f, 0.0f, -1.0f,  // 0
+             0.5f,  0.5f, -0.5f,  0.0f, 0.0f, -1.0f,  // 1
+             0.5f, -0.5f, -0.5f,  0.0f, 0.0f, -1.0f,  // 2
+            -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, -1.0f,  // 3
 
             // Back face (z = 0.5, normal = 0, 0, 1)
-            0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,   // 4
-            0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,   // 5
-            0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,   // 6
-            0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,   // 7
+            -0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,   // 4
+            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,   // 5
+             0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,   // 6
+             0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,   // 7
 
             // Left face (x = -0.5, normal = -1, 0, 0)
-            0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f,   // 8
-            0.5f,  0.5f, -0.5f, -1.0f, 0.0f, 0.0f,   // 9
-            0.5f,  0.5f,  0.5f, -1.0f, 0.0f, 0.0f,   // 10
-            0.5f, -0.5f,  0.5f, -1.0f, 0.0f, 0.0f,   // 11
+            -0.5f,  0.5f, -0.5f, -1.0f, 0.0f, 0.0f,   // 8
+            -0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f,   // 9
+            -0.5f, -0.5f,  0.5f, -1.0f, 0.0f, 0.0f,   // 10
+            -0.5f,  0.5f,  0.5f, -1.0f, 0.0f, 0.0f,   // 11
 
             // Right face (x = 0.5, normal = 1, 0, 0)
-            0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,   // 12
+            0.5f,  0.5f,  0.5f,  1.0f, 0.0f, 0.0f,   // 12
             0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 0.0f,   // 13
-            0.5f,  0.5f,  0.5f,  1.0f, 0.0f, 0.0f,   // 14
+            0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,   // 14
             0.5f,  0.5f, -0.5f,  1.0f, 0.0f, 0.0f,   // 15
 
             // Bottom face (y = -0.5, normal = 0, -1, 0)
-            -0.5f, -0.5f, -0.5f,  0.0f, -1.0f, 0.0f,  // 16
-             0.5f, -0.5f, -0.5f,  0.0f, -1.0f, 0.0f,  // 17
-             0.5f, -0.5f,  0.5f,  0.0f, -1.0f, 0.0f,  // 18
-            -0.5f, -0.5f,  0.5f,  0.0f, -1.0f, 0.0f,  // 19
+            -0.5f, -0.5f,  0.5f,  0.0f, -1.0f, 0.0f,  // 16
+            -0.5f, -0.5f, -0.5f,  0.0f, -1.0f, 0.0f,  // 17
+             0.5f, -0.5f, -0.5f,  0.0f, -1.0f, 0.0f,  // 18
+             0.5f, -0.5f,  0.5f,  0.0f, -1.0f, 0.0f,  // 19
 
             // Top face (y = 0.5, normal = 0, 1, 0)
             -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.0f,   // 20
-             0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.0f,   // 21
+            -0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 0.0f,   // 21
              0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 0.0f,   // 22
-            -0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 0.0f    // 23
+             0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.0f    // 23
         };
         uint32_t cubeIndices[] = {// Front
             0, 1, 2,   0, 2, 3,
@@ -105,11 +105,72 @@ namespace CGL {
         cubeInputFormat.push_back({ Type_Float , 3 });
 
         cube = new MeshBuffer(cubeInputFormat, cubeVert, 24, cubeIndices, Type_UInt, 36, Usage_StaticDraw, Usage_StaticDraw);
+        cubeShader = new Shader("Shaders/cube.vert", "Shaders/cube.frag");
+
+        GLint lightDirLoc = cubeShader->uniformLocation("lightDir");
+        GLint lightColorLoc = cubeShader->uniformLocation("lightColor");
+        GLint viewPosLoc = cubeShader->uniformLocation("viewPos");
+        GLint ambientColorLoc = cubeShader->uniformLocation("ambientColor");
+        GLint diffuseColorLoc = cubeShader->uniformLocation("diffuseColor");
+        GLint specularColorLoc = cubeShader->uniformLocation("specularColor");
+        GLint shininessLoc = cubeShader->uniformLocation("shininess");
+
+        // example scene parameters (replace with your actual values)
+        Vector3D light_direction_world = Vector3D(-0.5, -1, -1).unit(); // direction toward light source
+        Vector3D light_color = Vector3D(1.0, 1.0, 1.0);
+        Vector3D ambient_color = Vector3D(0.1, 0.1, 0.1);
+        Vector3D diffuse_color = Vector3D(1.0, 1.0, 1.0);
+        Vector3D specular_color = Vector3D(1.0, 1.0, 1.0);
+        float shininess = 64.0f;
+        Vector3D camera_pos = Vector3D(0.0, 0.0, 2.0);
+
+        // upload them
+        cubeShader->setVec3(lightDirLoc, light_direction_world);    // shader negates it internally
+        cubeShader->setVec3(lightColorLoc, light_color);
+        cubeShader->setVec3(ambientColorLoc, ambient_color);
+        cubeShader->setVec3(diffuseColorLoc, diffuse_color);
+        cubeShader->setVec3(specularColorLoc, specular_color);
+        cubeShader->setVec1(shininessLoc, shininess);
+        cubeShader->setVec3(viewPosLoc, camera_pos);
+
+
+        rotateX = 0;
+        rotateY = 0;
     }
 
     void Application::render() {
-        glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
+        glViewport(0, 0, (int)screenW, (int)screenH);
+
+        glClearColor(0, 0, 0, 0.0);
         glClear(GL_COLOR_BUFFER_BIT);
+
+
+        cubeShader->useProgram();
+        GLint modelloc = cubeShader->uniformLocation("model");
+        GLint viewloc = cubeShader->uniformLocation("view");
+        GLint projloc = cubeShader->uniformLocation("projection");
+        
+
+        Vector3D eyePos = Vector3D(0, 0, 3);
+        Vector3D eyeTarget = Vector3D(0, 0, 0);
+        Vector3D up = Vector3D(0, 1, 0);
+        Matrix4x4 viewm = Matrix4x4::lookAt(eyePos, eyeTarget, up);
+
+        double nearClip = 0.01;
+        double farClip = 1000;
+        Matrix4x4 projm = Matrix4x4::perspective(45.0 * (PI / 180.0), screenW / ((double)screenH), nearClip, farClip);
+
+        Matrix4x4 model = Matrix4x4::rotateX(rotateX) * Matrix4x4::rotateY(rotateY);
+
+        cubeShader->setMat4x4(viewloc, viewm);
+        cubeShader->setMat4x4(projloc, projm);
+        cubeShader->setMat4x4(modelloc, model);
+        glDisable(GL_CULL_FACE);
+        glEnable(GL_DEPTH_TEST);
+        cubeShader->useProgram();
+        cube->draw();
+        cubeShader->removeProgram();
+
         draw_hud();
     }
 
@@ -129,13 +190,14 @@ namespace CGL {
 
 
     void Application::cursor_event(float x, float y) {
-        if (leftDown && !middleDown && !rightDown) {
+        if (leftDown) {
             mouse1_dragged(x, y);
-        } else if (!leftDown && !middleDown && rightDown) {
-            mouse2_dragged(x, y);
-        } else if (!leftDown && !middleDown && !rightDown) {
-            mouse_moved(x, y);
         }
+        if (rightDown) {
+            mouse2_dragged(x, y);
+        }
+
+        mouse_moved(x, y);
 
         mouseX = x;
         mouseY = y;
@@ -222,7 +284,12 @@ namespace CGL {
     }
 
     void Application::mouse1_dragged(float x, float y) {
-
+        float dx = x - mouseX;
+        float dy = y - mouseY;
+        float horizontalSensitivity = 0.01f;
+        float verticalSensitivity = 0.01f;
+        rotateY -= dx * horizontalSensitivity;
+        rotateX += dy * verticalSensitivity;
     }
 
     void Application::mouse2_dragged(float x, float y) {
@@ -271,7 +338,7 @@ namespace CGL {
 
 
         GLint colorloc = quadShader->uniformLocation("color");
-        quadShader->setVec4(colorloc, 0.0, 0.0, 0.0, 0.8);
+        quadShader->setVec4(colorloc, 1, 1, 1, 0.8);
         GLint leftloc = quadShader->uniformLocation("left");
         GLint rightloc = quadShader->uniformLocation("right");
         GLint toploc = quadShader->uniformLocation("top");

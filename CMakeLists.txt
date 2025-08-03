@@ -29,8 +29,6 @@ if (WIN32)
     list(APPEND APPLICATION_SOURCE src/util/win32/getopt.c)
 endif()
 
-file(GLOB SHADER_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/util/Shaders/*)
-
 
 #-------------------------------------------------------------------------------
 # Create final program
@@ -68,20 +66,13 @@ target_link_libraries(bubble PUBLIC OpenGL::GLU)
 #-------------------------------------------------------------------------------
 # Copy shader files
 #-------------------------------------------------------------------------------
-add_custom_target(copy_shaders)
-foreach(shader_file IN LISTS SHADER_FILES)
-    get_filename_component(filename ${shader_file} NAME)
-    set(output_file ${CMAKE_BINARY_DIR}/Shaders/${filename})
-    
-    add_custom_command(
-        TARGET copy_shaders
-        PRE_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${shader_file} ${output_file}
-        COMMENT "Copying shader ${filename} if changed"
-        VERBATIM
-    )
-endforeach()
-add_dependencies(bubble copy_shaders)
+add_custom_target(copy_shaders ALL
+    COMMAND ${CMAKE_COMMAND}
+        -D SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
+        -D TARGET_DIR=$<TARGET_FILE_DIR:bubble>
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/copy_shaders.cmake
+    COMMENT "Copying shaders if changed or new"
+)
 
 
 

@@ -51,6 +51,7 @@ namespace CGL {
         Shader *quadShader;
 
         MeshBuffer *cube;
+        Shader *cubeShader;
 
         float mouseX, mouseY;
         enum e_mouse_button {
@@ -62,6 +63,8 @@ namespace CGL {
         bool leftDown;
         bool rightDown;
         bool middleDown;
+
+        float rotateX, rotateY;
 
         // Event handling //
 
