@@ -263,6 +263,15 @@ Matrix4x4 Matrix4x4::lookAt(const Vector3D &eye, const Vector3D &at, const Vecto
     return m;
 }
 
+Matrix4x4 Matrix4x4::scale(double x, double y, double z) {
+    Matrix4x4 m;
+    m.entries[0] = Vector4D(x, 0, 0, 0);
+    m.entries[1] = Vector4D(0, y, 0, 0);
+    m.entries[2] = Vector4D(0, 0, z, 0);
+    m.entries[3] = Vector4D(0, 0, 0, 1);
+    return m;
+}
+
 Matrix4x4 Matrix4x4::rotateX(double r) {
     Matrix4x4 m;
     double c = cos(r);

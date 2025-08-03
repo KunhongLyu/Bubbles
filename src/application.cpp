@@ -136,6 +136,7 @@ namespace CGL {
 
         rotateX = 0;
         rotateY = 0;
+        scale = 1.0f;
     }
 
     void Application::render() {
@@ -161,6 +162,7 @@ namespace CGL {
         Matrix4x4 projm = Matrix4x4::perspective(45.0 * (PI / 180.0), screenW / ((double)screenH), nearClip, farClip);
 
         Matrix4x4 model = Matrix4x4::rotateX(rotateX) * Matrix4x4::rotateY(rotateY);
+        model = Matrix4x4::scale(scale, scale, scale) * model;
 
         cubeShader->setMat4x4(viewloc, viewm);
         cubeShader->setMat4x4(projloc, projm);
@@ -204,6 +206,13 @@ namespace CGL {
     }
 
     void Application::scroll_event(float offset_x, float offset_y) {
+        scale += offset_y * 0.1f;
+        if (scale < 0.1f) {
+            scale = 0.1f; // Prevent scale from going too low
+        }
+        if (scale > 10.0f) {
+            scale = 10.0f; // Prevent scale from going too high
+        }
     }
 
     void Application::mouse_event(int key, int event, unsigned char mods) {

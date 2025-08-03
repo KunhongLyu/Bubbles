@@ -65,6 +65,7 @@ namespace CGL {
         bool middleDown;
 
         float rotateX, rotateY;
+        float scale;
 
         // Event handling //
 

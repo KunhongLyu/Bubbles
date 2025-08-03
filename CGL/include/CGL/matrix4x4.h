@@ -114,6 +114,7 @@ class Matrix4x4 {
 
   static Matrix4x4 lookAt(const Vector3D &eye, const Vector3D &center, const Vector3D &up);
 
+  static Matrix4x4 scale(double x, double y, double z);
   static Matrix4x4 rotateX(double r);
   static Matrix4x4 rotateY(double r);
   static Matrix4x4 rotateZ(double r);
