@@ -137,11 +137,25 @@ namespace CGL {
         rotateX = 0;
         rotateY = 0;
         scale = 1.0f;
+
+        renderMode = Mode_Phong;
     }
 
     void Application::render() {
-        glViewport(0, 0, (int)screenW, (int)screenH);
 
+
+        switch (renderMode) {
+        case Mode_Pathtracer:
+            render_pathtracer();
+            break;
+        case Mode_Phong:
+            render_phone();
+            break;
+        }
+    }
+
+
+    void Application::render_phone() {
         glClearColor(0, 0, 0, 0.0);
         glClear(GL_COLOR_BUFFER_BIT);
 
@@ -150,7 +164,7 @@ namespace CGL {
         GLint modelloc = cubeShader->uniformLocation("model");
         GLint viewloc = cubeShader->uniformLocation("view");
         GLint projloc = cubeShader->uniformLocation("projection");
-        
+
 
         Vector3D eyePos = Vector3D(0, 0, 3);
         Vector3D eyeTarget = Vector3D(0, 0, 0);
@@ -174,6 +188,17 @@ namespace CGL {
         cubeShader->removeProgram();
 
         draw_hud();
+    }
+    void Application::render_pathtracer() {
+
+    }
+
+
+    void start_pathtracer() {
+
+    }
+    void stop_pathtracer() {
+
     }
 
     void Application::resize(size_t w, size_t h) {
@@ -249,6 +274,14 @@ namespace CGL {
     void Application::keyboard_event(int key, int event, unsigned char mods) {
         if (event == EVENT_PRESS) {
             switch (key) {
+            case 'r': case 'R':
+                start_pathtracer();
+                renderMode = Mode_Pathtracer;
+                break;
+            case 't': case 'T':
+                stop_pathtracer();
+                renderMode = Mode_Phong;
+                break;
             case 'e': case 'E':
             case 'v': case 'V':
             case 's': case 'S':

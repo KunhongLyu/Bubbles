@@ -67,7 +67,28 @@ namespace CGL {
         float rotateX, rotateY;
         float scale;
 
+        enum RenderMode {
+            Mode_Pathtracer,
+            Mode_Phong,
+        };
+
+        RenderMode renderMode;
+
         // Event handling //
+
+        void render_phone();
+        void render_pathtracer();
+
+        void start_pathtracer();
+        void stop_pathtracer();
+
+        // HUD
+        bool show_hud;
+        void draw_hud();
+        inline void draw_string(float x, float y,
+            string str, size_t size, const Color &c);
+
+
 
         void lmouse_pressed();   // Left Mouse pressed.
         void lmouse_released();  // Left Mouse Released.
@@ -79,11 +100,6 @@ namespace CGL {
         void mouse2_dragged(float x, float y);  // Right Mouse Dragged.
         void mouse_moved(float x, float y);     // Mouse Moved.
 
-        // HUD
-        bool show_hud;
-        void draw_hud();
-        inline void draw_string(float x, float y,
-            string str, size_t size, const Color &c);
 
     }; // class Application
 
