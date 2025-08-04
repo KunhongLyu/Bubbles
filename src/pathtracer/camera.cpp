@@ -175,12 +175,6 @@ namespace CGL {
      */
     Ray Camera::generate_ray(double x, double y) const {
 
-        // TODO (Part 1.1):
-        // compute position of the input sensor sample coordinate on the
-        // canonical sensor plane one unit away from the pinhole.
-        // Note: hFov and vFov are in degrees.
-        //
-
         double hfov_rad = hFov * PI / 180.0;
         double vfov_rad = vFov * PI / 180.0;
         double tan_half_h = tan(hfov_rad / 2.0);

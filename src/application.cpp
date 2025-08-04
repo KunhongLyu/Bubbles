@@ -2,6 +2,9 @@
 
 namespace CGL {
 
+
+    // TODO : Implement the Application class.
+
     Application::Application() {
     }
 

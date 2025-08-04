@@ -65,10 +65,6 @@ namespace CGL {
         num_samples = num_samples;
         Vector3D L_out;
 
-        // TODO (Part 3): Write your sampling loop here
-        // TODO BEFORE YOU BEGIN
-        // UPDATE `est_radiance_global_illumination` to return direct lighting instead of normal shading 
-
         for (int i = 0; i < num_samples; i++) {
             Vector3D wi_loc = hemisphereSampler->get_sample();
             Vector3D wi_world = o2w * wi_loc;
@@ -127,8 +123,6 @@ namespace CGL {
 
     Vector3D PathTracer::zero_bounce_radiance(const Ray &r,
         const Intersection &isect) {
-        // TODO: Part 3, Task 2
-        // Returns the light that results from no bounces of light
 
         return isect.bsdf->get_emission();
 
@@ -136,9 +130,6 @@ namespace CGL {
 
     Vector3D PathTracer::one_bounce_radiance(const Ray &r,
         const Intersection &isect) {
-        // TODO: Part 3, Task 3
-        // Returns either the direct illumination by hemisphere or importance sampling
-        // depending on `direct_hemisphere_sample`
 
         if (direct_hemisphere_sample)
             return estimate_direct_lighting_hemisphere(r, isect);
@@ -157,7 +148,6 @@ namespace CGL {
 
         Vector3D L_out;
 
-        // TODO: Part 4, Task 2
         // Returns the one bounce radiance + radiance from extra bounces at this point.
         // Should be called recursively to simulate extra bounces.
 
@@ -228,17 +218,6 @@ namespace CGL {
         Intersection isect;
         Vector3D L_out;
 
-        // You will extend this in assignment 3-2.
-        // If no intersection occurs, we simply return black.
-        // This changes if you implement hemispherical lighting for extra credit.
-
-        // The following line of code returns a debug color depending
-        // on whether ray intersection with triangles or spheres has
-        // been implemented.
-        //
-        // REMOVE THIS LINE when you are ready to begin Part 3.
-
-
         if (isect.t == INF_D)
             return debug_shading(r.d);
         //L_out += normal_shading(isect.n);
@@ -248,23 +227,10 @@ namespace CGL {
         if (r.depth > 0)
             L_out += at_least_one_bounce_radiance(r, isect);
 
-        // TODO (Part 3): Return the direct illumination.
-
-        // TODO (Part 4): Accumulate the "direct" and "indirect"
-        // parts of global illumination into L_out rather than just direct
-
         return L_out;
     }
 
     void PathTracer::raytrace_pixel(size_t x, size_t y) {
-        // TODO (Part 1.2):
-        // Make a loop that generates num_samples camera rays and traces them
-        // through the scene. Return the average Vector3D.
-        // You should call est_radiance_global_illumination in this function.
-
-        // TODO (Part 5):
-        // Modify your implementation to include adaptive sampling.
-        // Use the command line parameters "samplesPerBatch" and "maxTolerance"
         int num_samples = ns_aa;          // total samples to evaluate
         Vector2D origin = Vector2D(x, y); // bottom left corner of the pixel
         Vector3D color;

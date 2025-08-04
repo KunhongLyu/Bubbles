@@ -22,6 +22,9 @@ using namespace std;
 
 namespace CGL {
 
+
+    // TODO
+    // Implement viewing the bubble.
     class Application : public Renderer {
     public:
 

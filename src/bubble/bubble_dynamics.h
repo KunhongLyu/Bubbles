@@ -12,7 +12,7 @@ namespace CGL {
     class BubbleDynamics {
     public:
 
-        virtual void update(float dt) = 0;
+        virtual void update(double dt) = 0;
 
         virtual const ObjPtrCapture<MeshBuffer> *getMeshCapture() const = 0;
         virtual const ObjPtrCapture<MeshablePathtracer> *getMeshPathtracerCapture() const = 0;

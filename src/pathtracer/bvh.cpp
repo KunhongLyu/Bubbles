@@ -52,12 +52,6 @@ namespace CGL {
         std::vector<Primitive *>::iterator end,
         size_t max_leaf_size) {
 
-        // TODO (Part 2.1):
-        // Construct a BVH from the given vector of primitives and maximum leaf
-        // size configuration. The starter code build a BVH aggregate with a
-        // single leaf node (which is also the root) that encloses all the
-        // primitives.
-
         size_t num_primitives = std::distance(start, end);
 
         BBox bbox;
@@ -104,11 +98,6 @@ namespace CGL {
     }
 
     bool BVHAccel::has_intersection(const Ray &ray, BVHNode *node) const {
-        // TODO (Part 2.3):
-        // Fill in the intersect function.
-        // Take note that this function has a short-circuit that the
-        // Intersection version cannot, since it returns as soon as it finds
-        // a hit, it doesn't actually have to find the closest hit.
 
         if (node == NULL)
             return false;
@@ -136,8 +125,7 @@ namespace CGL {
     }
 
     bool BVHAccel::intersect(const Ray &ray, Intersection *i, BVHNode *node) const {
-        // TODO (Part 2.3):
-        // Fill in the intersect function.
+
         if (node == NULL)
             return false;
 

@@ -518,7 +518,6 @@ namespace CGL {
          */
         Vector3D normal;
 
-        // TODO : add texcoord support
         // Complex texcoord;  ///< vertex texture coordinate
 
         Vector2D texcoord;

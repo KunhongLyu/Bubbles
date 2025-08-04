@@ -319,7 +319,8 @@ namespace CGL {
             }
         }
 
-        bvh->total_isects = 0; bvh->total_rays = 0;
+        bvh->total_isects = 0;
+        bvh->total_rays = 0;
         // launch threads
         fprintf(stdout, "[PathTracer] Rendering... "); fflush(stdout);
         for (int i = 0; i < numWorkerThreads; i++) {
