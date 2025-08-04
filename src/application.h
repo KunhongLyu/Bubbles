@@ -17,6 +17,8 @@
 #include "util/mesh_buffer.h"
 #include "util/shader.h"
 
+#include "bubble/bubble_dynamics.h"
+
 
 using namespace std;
 
@@ -44,6 +46,9 @@ namespace CGL {
         void mouse_event(int key, int event, unsigned char mods);
         void keyboard_event(int key, int event, unsigned char mods);
 
+        void set_bubble_dynamics(BubbleDynamics *bubbleDynamics);
+        void remove_bubble_dynamics();
+
     private:
         OSDText textManager;
 
@@ -55,6 +60,8 @@ namespace CGL {
 
         MeshBuffer *cube;
         Shader *cubeShader;
+
+        BubbleDynamics *bubbleDynamics;
 
         float mouseX, mouseY;
         enum e_mouse_button {

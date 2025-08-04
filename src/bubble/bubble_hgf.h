@@ -20,8 +20,8 @@ namespace CGL {
         void update(double dt);
 
 
-        const ObjPtrCapture<MeshBuffer> *getMeshCapture() const = 0;
-        const ObjPtrCapture<MeshablePathtracer> *getMeshPathtracerCapture() const = 0;
+        ObjPtrCapture<MeshBuffer> *getMeshCapture() const;
+        ObjPtrCapture<MeshablePathtracer> *getMeshPathtracerCapture() const;
 
     private:
 

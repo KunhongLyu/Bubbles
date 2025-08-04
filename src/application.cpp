@@ -11,12 +11,14 @@ namespace CGL {
     Application::~Application() {
         if (quadShader) {
             delete quadShader;
-            quadShader = NULL;
+            quadShader = nullptr;
         }
         if (quad) {
             delete quad;
-            quad = NULL;
+            quad = nullptr;
         }
+
+        remove_bubble_dynamics();
     }
 
     void Application::init() {
@@ -142,6 +144,9 @@ namespace CGL {
         scale = 1.0f;
 
         renderMode = Mode_Phong;
+
+
+        bubbleDynamics = nullptr;
     }
 
     void Application::render() {
@@ -186,7 +191,11 @@ namespace CGL {
         glDisable(GL_CULL_FACE);
         glEnable(GL_DEPTH_TEST);
         cubeShader->useProgram();
-        cube->draw();
+
+        auto bubbleMeshCapture = bubbleDynamics->getMeshCapture();
+        auto bubbleMesh = bubbleMeshCapture->capture();
+        bubbleMesh->draw();
+
         cubeShader->removeProgram();
 
         draw_hud();
@@ -342,6 +351,10 @@ namespace CGL {
 
     void Application::mouse_moved(float x, float y) {
 
+    }
+
+    void Application::set_bubble_dynamics(BubbleDynamics *bubbleDynamics) {
+        this->bubbleDynamics = bubbleDynamics;
     }
 
     inline void Application::draw_string(float x, float y,

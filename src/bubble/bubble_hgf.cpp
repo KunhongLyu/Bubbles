@@ -146,10 +146,10 @@ namespace CGL {
 
 
 
-    const ObjPtrCapture<MeshBuffer> *BubbleHGF::getMeshCapture() const {
+    ObjPtrCapture<MeshBuffer> *BubbleHGF::getMeshCapture() const {
         return glMeshCapture;
     };
-    const ObjPtrCapture<MeshablePathtracer> *BubbleHGF::getMeshPathtracerCapture() const {
+    ObjPtrCapture<MeshablePathtracer> *BubbleHGF::getMeshPathtracerCapture() const {
         return pathtracerCapture;
     }
 

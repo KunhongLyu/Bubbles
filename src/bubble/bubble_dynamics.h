@@ -14,8 +14,8 @@ namespace CGL {
 
         virtual void update(double dt) = 0;
 
-        virtual const ObjPtrCapture<MeshBuffer> *getMeshCapture() const = 0;
-        virtual const ObjPtrCapture<MeshablePathtracer> *getMeshPathtracerCapture() const = 0;
+        virtual ObjPtrCapture<MeshBuffer> *getMeshCapture() const = 0;
+        virtual ObjPtrCapture<MeshablePathtracer> *getMeshPathtracerCapture() const = 0;
     };
 } // namespace CGL
 
