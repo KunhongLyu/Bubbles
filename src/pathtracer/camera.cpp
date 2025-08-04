@@ -14,6 +14,7 @@ using std::max;
 using std::min;
 using std::ifstream;
 using std::ofstream;
+using std::string;
 
 namespace CGL {
 

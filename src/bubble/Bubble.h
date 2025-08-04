@@ -3,8 +3,8 @@
 #define __MESH_H__
 
 
-#include "../util/ObjPtrCapture.h"
-#include "../util/MeshBuffer.h"
+#include "../util/objptr_capture.h"
+#include "../util/mesh_buffer.h"
 #include "../pathtracer/bvh.h"
 
 namespace CGL {

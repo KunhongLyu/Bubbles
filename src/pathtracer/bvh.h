@@ -2,7 +2,7 @@
 #define CGL_BVH_H
 
 #include "primitive.h"
-#include "../util/ObjPtrCapture.h"
+#include "../util/objptr_capture.h"
 
 #include <vector>
 
@@ -17,7 +17,7 @@ namespace CGL {
         virtual std::vector<Primitive *>::iterator end() = 0;
     };
 
-    typedef ObjPtrCapture<MeshablePathtracer> MeshableCapture;
+    typedef ObjPtrCapture<MeshablePathtracer> MeshPathtracerCapture;
 
 
     /**
@@ -69,7 +69,7 @@ namespace CGL {
          * \param primitives primitives to build from
          * \param max_leaf_size maximum number of primitives to be stored in leaves
          */
-        BVHAccel(MeshableCapture *capture, size_t max_leaf_size = 4);
+        BVHAccel(MeshPathtracerCapture *capture, size_t max_leaf_size = 4);
 
         /**
          * Destructor.

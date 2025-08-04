@@ -14,8 +14,8 @@
 #include "CGL/renderer.h"
 #include "CGL/osdtext.h"
 
-#include "util/MeshBuffer.h"
-#include "util/Shader.h"
+#include "util/mesh_buffer.h"
+#include "util/shader.h"
 
 
 using namespace std;
@@ -78,6 +78,7 @@ namespace CGL {
 
         void render_phone();
         void render_pathtracer();
+        void forward_dynamics();
 
         void start_pathtracer();
         void stop_pathtracer();

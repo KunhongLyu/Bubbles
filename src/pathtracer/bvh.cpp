@@ -10,7 +10,7 @@
 using namespace std;
 namespace CGL {
 
-    BVHAccel::BVHAccel(MeshableCapture *capture, size_t max_leaf_size) {
+    BVHAccel::BVHAccel(MeshPathtracerCapture *capture, size_t max_leaf_size) {
         auto meshable = capture->current();
         auto start = meshable->begin();
         auto end = meshable->end();

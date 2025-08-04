@@ -143,7 +143,6 @@ namespace CGL {
 
     void Application::render() {
 
-
         switch (renderMode) {
         case Mode_Pathtracer:
             render_pathtracer();
@@ -194,12 +193,17 @@ namespace CGL {
     }
 
 
-    void start_pathtracer() {
+    void Application::start_pathtracer() {
 
     }
-    void stop_pathtracer() {
+    void Application::stop_pathtracer() {
 
     }
+
+    void Application::forward_dynamics() {
+
+    }
+
 
     void Application::resize(size_t w, size_t h) {
         screenW = w;
@@ -282,20 +286,15 @@ namespace CGL {
                 stop_pathtracer();
                 renderMode = Mode_Phong;
                 break;
-            case 'e': case 'E':
-            case 'v': case 'V':
-            case 's': case 'S':
-            case '[': case ']':
-            case '+': case '=':
-            case '-': case '_':
-            case '.': case '>':
-            case ',': case '<':
-            case 'h': case 'H':
-            case 'k': case 'K':
-            case 'l': case 'L':
-            case ';': case '\'':
-            case 'Q': case 'q':
-            case 'G': case 'g':
+            case 'f': case 'F':
+                forward_dynamics();
+                switch (renderMode) {
+                case Mode_Pathtracer:
+
+                    break;
+                case Mode_Phong:
+                    break;
+                }
                 break;
             }
         }

@@ -6,20 +6,30 @@
 #include <random>
 #include <algorithm>
 #include <sstream>
+#include <filesystem>
 
 #include "CGL/CGL.h"
-#include "CGL/vector3D.h"
-#include "CGL/matrix3x3.h"
+#include "CGL/CGLMath.h"
 #include "CGL/lodepng.h"
 
 #include "GL/glew.h"
 
-#include "pathtracer/triangle.h"
+#include "pathtracer/pathtracer.h"
+
 
 using std::min;
 using std::max;
 
 using std::string;
+
+using std::unique_lock;
+using std::stack;
+
+using std::lock_guard;
+using std::cout;
+using std::endl;
+using std::cin;
+using std::stringstream;
 
 namespace CGL {
 
@@ -41,16 +51,13 @@ namespace CGL {
         size_t num_threads,
         size_t samples_per_batch,
         float max_tolerance,
-        HDRImageBuffer *envmap,
-        bool direct_hemisphere_sample,
-        bool use_roulett_stopping,
-        string filename,
+        bool use_roulette_stopping,
+        float roulette_prob = 0.2,
         double lensRadius,
         double focalDistance) {
         state = INIT;
 
         pt = new PathTracer();
-        pt->set_roulette_prob(0.2);
 
         pt->ns_aa = ns_aa;                                        // Number of samples per pixel
         pt->max_ray_depth = max_ray_depth;                        // Maximum recursion ray depth
@@ -61,19 +68,11 @@ namespace CGL {
         pt->ns_refr = ns_refr;                                    // Number of samples for refraction
         pt->samplesPerBatch = samples_per_batch;                  // Number of samples per batch
         pt->maxTolerance = max_tolerance;                         // Maximum tolerance for early termination
-        pt->direct_hemisphere_sample = direct_hemisphere_sample;  // Whether to use direct hemisphere sampling vs. Importance Sampling
-        pt->use_roulette_stopping = use_roulett_stopping;
+        pt->use_roulette_stopping = use_roulette_stopping;
+        pt->set_roulette_prob(roulette_prob);
 
         this->lensRadius = lensRadius;
         this->focalDistance = focalDistance;
-
-        this->filename = filename;
-
-        if (envmap) {
-            pt->envLight = new EnvironmentLight(envmap);
-        } else {
-            pt->envLight = NULL;
-        }
 
         bvh = NULL;
         scene = NULL;
@@ -92,7 +91,7 @@ namespace CGL {
      */
     PathtracerRenderer::~PathtracerRenderer() {
 
-        delete bvh;
+        clear_accel();
         delete pt;
 
     }
@@ -104,6 +103,7 @@ namespace CGL {
      * scene is later passed in.
      * \param scene pointer to the new scene to be rendered
      */
+
     void PathtracerRenderer::set_scene(Scene *scene) {
 
         if (state != INIT) {
@@ -111,13 +111,7 @@ namespace CGL {
         }
 
         if (this->scene != nullptr) {
-            delete scene;
-            delete bvh;
-            selectionHistory.pop();
-        }
-
-        if (pt->envLight != nullptr) {
-            scene->lights.push_back(pt->envLight);
+            clear_accel();
         }
 
         this->scene = scene;
@@ -188,6 +182,7 @@ namespace CGL {
      * the BVH visualization with OpenGL.
      */
     void PathtracerRenderer::update_screen() {
+        // to edit
         switch (state) {
         case INIT:
         case READY:
@@ -214,13 +209,14 @@ namespace CGL {
      * Transitions from any running state to READY.
      */
     void PathtracerRenderer::stop() {
+        // to edit
         switch (state) {
         case INIT:
         case READY:
             break;
         case VISUALIZE:
-            while (selectionHistory.size() > 1) {
-                selectionHistory.pop();
+            while (bvhSelectionHistory.size() > 1) {
+                bvhSelectionHistory.pop();
             }
             state = READY;
             break;
@@ -240,12 +236,12 @@ namespace CGL {
      * If the pathtracer is in READY, delete all internal data, transition to INIT.
      */
     void PathtracerRenderer::clear() {
+        // to edit
         if (state != READY) return;
-        delete bvh;
-        bvh = NULL;
-        scene = NULL;
-        camera = NULL;
-        selectionHistory.pop();
+        clear_accel();
+        scene = nullptr;
+        camera = nullptr;
+        bvhSelectionHistory = {};
         frameBuffer.resize(0, 0);
         state = INIT;
         render_cell = false;
@@ -261,6 +257,8 @@ namespace CGL {
             return;
         }
         state = VISUALIZE;
+        bvhSelectionHistory = {};
+        bvhSelectionHistory.push(bvh->get_root());
     }
 
     /**
@@ -284,7 +282,7 @@ namespace CGL {
 
         pt->bvh = bvh;
         pt->camera = camera;
-        pt->scene = scene;
+        pt->lights = scene->lights;
 
         if (!render_cell) {
             frameBuffer.clear();
@@ -351,121 +349,114 @@ namespace CGL {
 
     void PathtracerRenderer::build_accel() {
 
-        // collect primitives //
-        fprintf(stdout, "[PathTracer] Collecting primitives... "); fflush(stdout);
-        timer.start();
-        vector<Primitive *> primitives;
-        for (SceneObject *obj : scene->objects) {
-            const vector<Primitive *> &obj_prims = obj->get_primitives();
-            primitives.reserve(primitives.size() + obj_prims.size());
-            primitives.insert(primitives.end(), obj_prims.begin(), obj_prims.end());
-        }
-        timer.stop();
-        fprintf(stdout, "Done! (%.4f sec)\n", timer.duration());
-
-        // build BVH //
-        fprintf(stdout, "[PathTracer] Building BVH from %lu primitives... ", primitives.size());
+        cout << "[PathTracer] Building BVH" << endl;
         fflush(stdout);
         timer.start();
-        bvh = new BVHAccel(primitives);
+        bvh = new BVHAccel(scene->scene);
         timer.stop();
         fprintf(stdout, "Done! (%.4f sec)\n", timer.duration());
 
         // initial visualization //
-        selectionHistory.push(bvh->get_root());
+        bvhSelectionHistory.push(bvh->get_root());
+    }
+    void PathtracerRenderer::clear_accel() {
+        if (bvh != nullptr) {
+            delete bvh;
+            bvh = nullptr;
+        }
     }
 
     void PathtracerRenderer::visualize_accel() const {
 
-        glPushAttrib(GL_ENABLE_BIT);
-        glDisable(GL_LIGHTING);
-        glLineWidth(1);
-        glEnable(GL_DEPTH_TEST);
+        //glPushAttrib(GL_ENABLE_BIT);
+        //glDisable(GL_LIGHTING);
+        //glLineWidth(1);
+        //glEnable(GL_DEPTH_TEST);
 
-        // hardcoded color settings
-        Color cnode = Color(.5, .5, .5); float cnode_alpha = 0.25f;
-        Color cnode_hl = Color(1., .25, .0); float cnode_hl_alpha = 0.6f;
-        Color cnode_hl_child = Color(1., 1., 1.); float cnode_hl_child_alpha = 0.6f;
+        //// hardcoded color settings
+        //Color cnode = Color(.5, .5, .5); float cnode_alpha = 0.25f;
+        //Color cnode_hl = Color(1., .25, .0); float cnode_hl_alpha = 0.6f;
+        //Color cnode_hl_child = Color(1., 1., 1.); float cnode_hl_child_alpha = 0.6f;
 
-        Color cprim_hl_left = Color(.6, .6, 1.); float cprim_hl_left_alpha = 1.f;
-        Color cprim_hl_right = Color(.8, .8, 1.); float cprim_hl_right_alpha = 1.f;
-        Color cprim_hl_edges = Color(0., 0., 0.); float cprim_hl_edges_alpha = 0.5f;
+        //Color cprim_hl_left = Color(.6, .6, 1.); float cprim_hl_left_alpha = 1.f;
+        //Color cprim_hl_right = Color(.8, .8, 1.); float cprim_hl_right_alpha = 1.f;
+        //Color cprim_hl_edges = Color(0., 0., 0.); float cprim_hl_edges_alpha = 0.5f;
 
-        BVHNode *selected = selectionHistory.top();
+        //BVHNode *selected = bvhSelectionHistory.top();
 
-        // render solid geometry (with depth offset)
-        glPolygonOffset(1.0, 1.0);
-        glEnable(GL_POLYGON_OFFSET_FILL);
+        //// render solid geometry (with depth offset)
+        //glPolygonOffset(1.0, 1.0);
+        //glEnable(GL_POLYGON_OFFSET_FILL);
 
-        if (selected->isLeaf()) {
-            bvh->draw(selected, cprim_hl_left, cprim_hl_left_alpha);
-        } else {
-            bvh->draw(selected->l, cprim_hl_left, cprim_hl_left_alpha);
-            bvh->draw(selected->r, cprim_hl_right, cprim_hl_right_alpha);
-        }
+        //if (selected->isLeaf()) {
+        //    bvh->draw(selected, cprim_hl_left, cprim_hl_left_alpha);
+        //} else {
+        //    bvh->draw(selected->l, cprim_hl_left, cprim_hl_left_alpha);
+        //    bvh->draw(selected->r, cprim_hl_right, cprim_hl_right_alpha);
+        //}
 
-        glDisable(GL_POLYGON_OFFSET_FILL);
+        //glDisable(GL_POLYGON_OFFSET_FILL);
 
-        // draw geometry outline
-        bvh->drawOutline(selected, cprim_hl_edges, cprim_hl_edges_alpha);
+        //// draw geometry outline
+        //bvh->drawOutline(selected, cprim_hl_edges, cprim_hl_edges_alpha);
 
-        // keep depth buffer check enabled so that mesh occluded bboxes, but
-        // disable depth write so that bboxes don't occlude each other.
-        glDepthMask(GL_FALSE);
+        //// keep depth buffer check enabled so that mesh occluded bboxes, but
+        //// disable depth write so that bboxes don't occlude each other.
+        //glDepthMask(GL_FALSE);
 
-        // create traversal stack
-        stack<BVHNode *> tstack;
+        //// create traversal stack
+        //stack<BVHNode *> tstack;
 
-        // push initial traversal data
-        tstack.push(bvh->get_root());
+        //// push initial traversal data
+        //tstack.push(bvh->get_root());
 
-        // draw all BVH bboxes with non-highlighted color
-        while (!tstack.empty()) {
+        //// draw all BVH bboxes with non-highlighted color
+        //while (!tstack.empty()) {
 
-            BVHNode *current = tstack.top();
-            tstack.pop();
+        //    BVHNode *current = tstack.top();
+        //    tstack.pop();
 
-            current->bb.draw(cnode, cnode_alpha);
-            if (current->l) tstack.push(current->l);
-            if (current->r) tstack.push(current->r);
-        }
+        //    current->bb.draw(cnode, cnode_alpha);
+        //    if (current->l) tstack.push(current->l);
+        //    if (current->r) tstack.push(current->r);
+        //}
 
-        // draw selected node bbox and primitives
-        if (selected->l) selected->l->bb.draw(cnode_hl_child, cnode_hl_child_alpha);
-        if (selected->r) selected->r->bb.draw(cnode_hl_child, cnode_hl_child_alpha);
+        //// draw selected node bbox and primitives
+        //if (selected->l) selected->l->bb.draw(cnode_hl_child, cnode_hl_child_alpha);
+        //if (selected->r) selected->r->bb.draw(cnode_hl_child, cnode_hl_child_alpha);
 
-        glLineWidth(3.f);
-        selected->bb.draw(cnode_hl, cnode_hl_alpha);
+        //glLineWidth(3.f);
+        //selected->bb.draw(cnode_hl, cnode_hl_alpha);
 
-        // now perform visualization of the rays
-        if (show_rays) {
-            glLineWidth(1.f);
-            glBegin(GL_LINES);
+        //// now perform visualization of the rays
+        //if (show_rays) {
+        //    glLineWidth(1.f);
+        //    glBegin(GL_LINES);
 
-            for (size_t i = 0; i < rayLog.size(); i += 500) {
+        //    for (size_t i = 0; i < rayLog.size(); i += 500) {
 
-                const static double VERY_LONG = 10e4;
-                double ray_t = VERY_LONG;
+        //        const static double VERY_LONG = 10e4;
+        //        double ray_t = VERY_LONG;
 
-                // color rays that are hits yellow
-                // and rays this miss all geometry red
-                if (rayLog[i].hit_t >= 0.0) {
-                    ray_t = rayLog[i].hit_t;
-                    glColor4f(1.f, 1.f, 0.f, 0.1f);
-                } else {
-                    glColor4f(1.f, 0.f, 0.f, 0.1f);
-                }
+        //        // color rays that are hits yellow
+        //        // and rays this miss all geometry red
+        //        if (rayLog[i].hit_t >= 0.0) {
+        //            ray_t = rayLog[i].hit_t;
+        //            glColor4f(1.f, 1.f, 0.f, 0.1f);
+        //        } else {
+        //            glColor4f(1.f, 0.f, 0.f, 0.1f);
+        //        }
 
-                Vector3D end = rayLog[i].o + ray_t * rayLog[i].d;
+        //        Vector3D end = rayLog[i].o + ray_t * rayLog[i].d;
 
-                glVertex3f(rayLog[i].o[0], rayLog[i].o[1], rayLog[i].o[2]);
-                glVertex3f(end[0], end[1], end[2]);
-            }
-            glEnd();
-        }
+        //        glVertex3f(rayLog[i].o[0], rayLog[i].o[1], rayLog[i].o[2]);
+        //        glVertex3f(end[0], end[1], end[2]);
+        //    }
+        //    glEnd();
+        //}
 
-        glDepthMask(GL_TRUE);
-        glPopAttrib();
+        //glDepthMask(GL_TRUE);
+        //glPopAttrib();
     }
 
     void PathtracerRenderer::visualize_cell() const {
@@ -510,7 +501,7 @@ namespace CGL {
      * If the pathtracer is in VISUALIZE, handle key presses to traverse the bvh.
      */
     void PathtracerRenderer::key_press(int key) {
-        BVHNode *current = selectionHistory.top();
+        BVHNode *current = bvhSelectionHistory.top();
         switch (key) {
         case ']':
             pt->ns_aa *= 2;
@@ -578,17 +569,17 @@ namespace CGL {
             break;
         case KEYBOARD_UP:
             if (current != bvh->get_root()) {
-                selectionHistory.pop();
+                bvhSelectionHistory.pop();
             }
             break;
         case KEYBOARD_LEFT:
             if (current->l) {
-                selectionHistory.push(current->l);
+                bvhSelectionHistory.push(current->l);
             }
             break;
         case KEYBOARD_RIGHT:
             if (current->l) {
-                selectionHistory.push(current->r);
+                bvhSelectionHistory.push(current->r);
             }
             break;
 
@@ -689,16 +680,16 @@ namespace CGL {
         workerDoneCount++;
         if (!continueRaytracing && workerDoneCount == numWorkerThreads) {
             timer.stop();
-            fprintf(stdout, "\n[PathTracer] Rendering canceled!\n");
+            cout << "\n[PathTracer] Rendering canceled!\n";
             state = READY;
         }
 
         if (continueRaytracing && workerDoneCount == numWorkerThreads) {
             timer.stop();
             fprintf(stdout, "\r[PathTracer] Rendering... 100%%! (%.4fs)\n", timer.duration());
-            fprintf(stdout, "[PathTracer] BVH traced %llu rays.\n", bvh->total_rays);
+            cout << "[PathTracer] BVH traced " << bvh->total_rays << " rays." << endl;
             fprintf(stdout, "[PathTracer] Average speed %.4f million rays per second.\n", (double)bvh->total_rays / timer.duration() * 1e-6);
-            fprintf(stdout, "[PathTracer] Averaged %f intersection tests per ray.\n", (((double)bvh->total_isects) / bvh->total_rays));
+            cout << "[PathTracer] Averaged " << (((double)bvh->total_isects) / bvh->total_rays) << " intersection tests per ray.\n";
 
             lock_guard<std::mutex> lk(m_done);
             state = DONE;
@@ -720,7 +711,14 @@ namespace CGL {
             time_t t = time(nullptr);
             tm *lt = localtime(&t);
             stringstream ss;
-            ss << this->filename << "_screenshot_" << lt->tm_mon + 1 << "-" << lt->tm_mday << "_"
+
+            using namespace std::filesystem;
+            string screenshotFolderName = "screenshots/";
+            path screenshotFolder = screenshotFolderName; // Define the path to your folder
+            if (!exists(screenshotFolder)) {
+                create_directory(screenshotFolder);
+            }
+            ss << screenshotFolderName << this->filename << "_screenshot_" << lt->tm_mon + 1 << "-" << lt->tm_mday << "_"
                 << lt->tm_hour << "-" << lt->tm_min << "-" << lt->tm_sec << ".png";
             filename = ss.str();
         }
@@ -737,9 +735,9 @@ namespace CGL {
             frame_out[i] |= 0xFF000000;
         }
 
-        fprintf(stderr, "[PathTracer] Saving to file: %s... ", filename.c_str());
+        std::cerr << "[PathTracer] Saving to file: " << filename.c_str();
         lodepng::encode(filename, (unsigned char *)frame_out, w, h);
-        fprintf(stderr, "Done!\n");
+        std::cerr << "Done!" << endl;
 
         delete[] frame_out;
 
@@ -751,13 +749,10 @@ namespace CGL {
         size_t h = frameBuffer.h;
         ImageBuffer outputBuffer(w, h);
 
-        int m = -1;
-        for (int x = 0; x < w; x++) {
-            for (int y = 0; y < h; y++) {
-                int cur = pt->sampleCountBuffer[y * w + x];
-                if (cur > m)
-                    m = cur;
-            }
+        int m = pt->sampleCountBuffer[0];
+        for (int p : pt->sampleCountBuffer) {
+            if (p > m)
+                m = p;
         }
 
         cout << "Maximum sample count is " << m << endl;

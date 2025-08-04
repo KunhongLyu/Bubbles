@@ -1,5 +1,5 @@
-#ifndef CGL_PATHTRACER_H
-#define CGL_PATHTRACER_H
+#ifndef __CGL_PATHTRACER_H__
+#define __CGL_PATHTRACER_H__
 
 #include "CGL/timer.h"
 #include "CGL/CGLMath.h"
@@ -7,9 +7,11 @@
 #include "bvh.h"
 #include "sampler.h"
 #include "intersection.h"
+#include "light.h"
 
 #include "../util/image.h"
-#include "../util/camera.h"
+#include "camera.h"
+
 
 using CGL::BVHNode;
 using CGL::BVHAccel;
@@ -99,6 +101,8 @@ namespace CGL {
 
         std::vector<int> sampleCountBuffer;   ///< sample count buffer
 
+        std::vector<SceneLight *> lights; ///< scene lights
+
         Camera *camera;       ///< current camera
 
         // Tonemapping Controls //
@@ -111,4 +115,4 @@ namespace CGL {
 
 }  // namespace CGL
 
-#endif  // CGL_RAYTRACER_H
+#endif  // __CGL_PATHTRACER_H__

@@ -7,7 +7,7 @@
 #include "CGL/matrix3x3.h"
 
 #include "math.h"
-#include "../pathtracer/ray.h"
+#include "ray.h"
 
 
 namespace CGL {

@@ -3,6 +3,7 @@
 #include "CGL/viewer.h"
 
 #include "application.h"
+#include "pathtracer/pathtracer.h"
 
 
 using namespace CGL;
@@ -24,3 +25,6 @@ int main(int argc, char **argv) {
     // start viewer
     viewer.start();
 }
+
+// 14:39
+// 0:35

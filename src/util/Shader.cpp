@@ -1,5 +1,5 @@
 
-#include "Shader.h"
+#include "shader.h"
 #include <fstream>
 
 #include "CGL/CGL.h"

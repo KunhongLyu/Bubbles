@@ -61,7 +61,7 @@ namespace CGL {
         // This is the same number of total samples as
         // estimate_direct_lighting_importance (outside of delta lights). We keep the
         // same number of samples for clarity of comparison.
-        int num_samples = scene->lights.size() * ns_area_light;
+        int num_samples = lights.size() * ns_area_light;
         num_samples = num_samples;
         Vector3D L_out;
 
@@ -103,7 +103,7 @@ namespace CGL {
         const Vector3D w_out = w2o * (-r.d);
         Vector3D L_out;
 
-        for (const auto &light) {
+        for (const auto &light : lights) {
             int n_samples = light->is_delta_light() ? 1 : ns_area_light;
             Vector3D contrib(0.0);
             for (int i = 0; i < n_samples; i++) {
@@ -204,8 +204,6 @@ namespace CGL {
             Vector3D Li;
             if (bvh->intersect(new_r, &new_isect)) {
                 Li = at_least_one_bounce_radiance_internal<use_roulette>(new_r, new_isect);
-            } else if (envLight) {
-                Li = envLight->sample_dir(new_r);
             }
 
             if (use_roulette)

@@ -1,6 +1,6 @@
 
-#ifndef CGL_PATHTRACER_H
-#define CGL_PATHTRACER_H
+#ifndef __CGL_PATHTRACER_RENDERER_H__
+#define __CGL_PATHTRACER_RENDERER_H__
 
 #include <stack>
 #include <thread>
@@ -16,21 +16,14 @@
 #include "pathtracer/camera.h"
 #include "pathtracer/sampler.h"
 #include "util/image.h"
-#include "util/work_queue.h"
 #include "pathtracer/intersection.h"
+#include "util/work_queue.h"
 
-#include "application/renderer.h"
 
-#include "scene/scene.h"
-using CGL::SceneObjects::Scene;
+#include "pathtracer/pathtracer.h"
 
-#include "scene/environment_light.h"
-using CGL::SceneObjects::EnvironmentLight;
+using std::vector;
 
-using CGL::SceneObjects::BVHNode;
-using CGL::SceneObjects::BVHAccel;
-
-#include "pathtracer.h"
 
 namespace CGL {
 
@@ -46,6 +39,12 @@ namespace CGL {
         int tile_y;
         int tile_w;
         int tile_h;
+    };
+
+    class Scene {
+    public:
+        vector<SceneLight *> lights;
+        MeshPathtracerCapture *scene;
     };
 
     /**
@@ -70,10 +69,8 @@ namespace CGL {
             size_t num_threads = 1,
             size_t samples_per_batch = 32,
             float max_tolerance = 0.05f,
-            HDRImageBuffer *envmap = NULL,
-            bool direct_hemisphere_sample = false,
-            bool use_roulett_stopping = false,
-            string filename = "",
+            bool use_roulette_stopping = false,
+            float roulette_prob = 0.2,
             double lensRadius = 0.25,
             double focalDistance = 4.7);
 
@@ -173,6 +170,9 @@ namespace CGL {
          * Build acceleration structures.
          */
         void build_accel();
+        
+        void clear_accel();
+
 
         /**
          * Visualize acceleration structures.
@@ -205,7 +205,7 @@ namespace CGL {
         // Configurables //
 
         State state;          ///< current state
-        Scene *scene;         ///< current scene
+        Scene *scene;        ///< current scene
         Camera *camera;       ///< current camera
 
         // Integration state //
@@ -243,13 +243,17 @@ namespace CGL {
 
         // Visualizer Controls //
 
-        std::stack<BVHNode *> selectionHistory;  ///< node selection history
+        std::stack<BVHNode *> bvhSelectionHistory;  ///< node selection history
         std::vector<LoggedRay> rayLog;          ///< ray tracing log
         bool show_rays;                         ///< show rays from raylog
 
         std::string filename;
+
+
+        Vector2D cell_tl, cell_br;
+        bool render_cell;
     };
 
 }  // namespace CGL
 
-#endif  // CGL_PATHTRACER_H
+#endif  // __CGL_PATHTRACER_RENDERER_H__

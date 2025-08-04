@@ -3,7 +3,6 @@
 #define __MESHABLE_H__
 
 #include <vector>
-#include "../pathtracer/primitive.h"
 
 
 namespace CGL {
