@@ -16,7 +16,22 @@ if (BUILD_DEBUG)
 endif()
 
 
+#-------------------------------------------------------------------------------
+# Find Eigen (add this near other find_package calls)
+#-------------------------------------------------------------------------------
+find_package(Eigen3 REQUIRED)
 
+#-------------------------------------------------------------------------------
+# Build options
+#-------------------------------------------------------------------------------
+option(BUILD_DEBUG     "Build with debug settings"    OFF)
+option(BUILD_DOCS      "Build documentation"          OFF)
+
+set(BUILD_DEBUG ${BUILD_DEBUG} CACHE BOOL "Build debug" FORCE)
+
+if (BUILD_DEBUG)
+  set(CMAKE_BUILD_TYPE Debug)
+endif()
 
 #-------------------------------------------------------------------------------
 # Source files
@@ -28,6 +43,7 @@ file(GLOB_RECURSE APPLICATION_HEADERS "*.h")
 if (WIN32)
     list(APPEND APPLICATION_SOURCE src/util/win32/getopt.c)
 endif()
+
 
 
 #-------------------------------------------------------------------------------
@@ -49,6 +65,12 @@ set(CGL_INCLUDE_DIRS CGL/include CGL/deps/glew/include CGL/deps/glfw/include src
 
 add_subdirectory(CGL)
 target_include_directories(bubble PUBLIC ${CGL_INCLUDE_DIRS})
+target_include_directories(bubble PUBLIC 
+    src
+    ${EIGEN3_INCLUDE_DIR}
+    ${CGL_INCLUDE_DIRS}
+)
+
 
 
 
@@ -60,6 +82,8 @@ set(OpenGL_GL_PREFERENCE LEGACY)
 find_package(OpenGL REQUIRED)
 target_link_libraries(bubble PUBLIC OpenGL::GL)
 target_link_libraries(bubble PUBLIC OpenGL::GLU)
+target_link_libraries(bubble PUBLIC CGL OpenGL::GL OpenGL::GLU)
+
 
 
 
