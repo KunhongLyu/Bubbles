@@ -7,13 +7,13 @@
 
 namespace CGL {
 
-    using namespace Eigen;
 
     // TODO see header comment
     BubbleHGF::BubbleHGF() {
         // Initialize the HGF parameters
         glMeshCapture = new HGFMeshCapture(this);
         pathtracerCapture = new HGFPathtracerCapture(this);
+
     }
     BubbleHGF::~BubbleHGF() {
         // Cleanup if necessary
@@ -57,6 +57,7 @@ namespace CGL {
 
     void BubbleHGF::forwardKinesmatics(double dt) {
 
+        using namespace Eigen;
 
         // TODO:
         // Calculate the M, L, and X matrices, then
