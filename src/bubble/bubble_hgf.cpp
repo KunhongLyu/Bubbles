@@ -42,7 +42,7 @@ namespace CGL {
     
             // Get v for each face
         for (FaceCIter f = faces.begin(); f != faces.end(); f++) {
-            HalfedgeIter h = f->halfedge();
+            HalfedgeCIter h = f->halfedge();
                Vector3D v0 = h->vertex()->position;
                Vector3D v1 = h->next()->vertex()->position;
                Vector3D v2 = h->next()->next()->vertex()->position;
@@ -124,7 +124,6 @@ namespace CGL {
         // Correct the volume of the bubble by adjusting the vertices
         // so that the volume is equal to this->volume,
         // probably just scale the vertices by the scale factor
-        double scale = pow(this->volume / currentVolume, 1.0 / 3.0);
         Vector3D center(0.0, 0.0, 0.0);
 
         // calc center of mass
