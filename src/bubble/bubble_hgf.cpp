@@ -2,7 +2,7 @@
 #include "bubble_hgf.h"
 #include "../pathtracer/bubble_bsdf.h"
 #include "../pathtracer/triangle.h"
-
+#include <Eigen/Dense> 
 
 
 namespace CGL {
@@ -31,31 +31,114 @@ namespace CGL {
     }
 
 
+
     double BubbleHGF::calculateVolume() const {
         // Calculate the volume of the bubble
         double volume = 0.0;
 
-        // TODO:
-        // use divergence theorem on each face to calculate the volume
+        // TODO:done
+        // use divergence theorem on each face to calculate the volume Vtetr = (V0 DOT (v1 x v2) )
 
-        return volume;
+    
+            // Get v for each face
+        for (FaceCIter f = faces.begin(); f != faces.end(); f++) {
+            HalfedgeIter h = f->halfedge();
+               Vector3D v0 = h->vertex()->position;
+               Vector3D v1 = h->next()->vertex()->position;
+               Vector3D v2 = h->next()->next()->vertex()->position;
+
+            // calc the signed volume of the tetrahedron formed by the triangle and the origin
+            double tetrahedronVolume = dot(v0, cross(v1, v2)) / 6.0;
+            volume += tetrahedronVolume;
+        }
+
+        return abs(volume);
+     
     }
+    using Eigen::MatrixXd;
 
     void BubbleHGF::forwardKinesmatics() {
+
 
         // TODO:
         // Calculate the M, L, and X matrices, then
         // update the positions of the vertices based on these
         // matrices
+        size_t n = vertices.size();
+        if (n == 0) return;
+
+        // Create vertex index map
+        std::unordered_map<VertexIter, size_t> vertexIndices;
+        size_t idx = 0;
+        for (auto v = vertices.begin(); v != vertices.end(); ++v, ++idx) {
+            vertexIndices[v] = idx;
+        }
+
+        MatrixXd M = MatrixXd::Zero(n, n);  // Mass matrix
+        MatrixXd L = MatrixXd::Zero(n, n);  // Laplacian matrix
+        MatrixXd X(n, 3);                   // Position matrix
+
+        //  mass matrix
+        double m = 1.0 / n;
+        for (size_t i = 0; i < n; ++i) {
+            M(i, i) = m;
+        }
+
+        //  position matrix
+        idx = 0;
+        for (auto v = vertices.begin(); v != vertices.end(); ++v, ++idx) {
+            X.row(idx) << v->position.x, v->position.y, v->position.z;
+        }
+
+        //  Laplacian matrix
+        for (auto e = edges.begin(); e != edges.end(); ++e) {
+            size_t i = vertexIndices[e->halfedge()->vertex()];
+            size_t j = vertexIndices[e->halfedge()->twin()->vertex()];
+            L(i, j) = -1.0;
+            L(j, i) = -1.0;
+            L(i, i) += 1.0;
+            L(j, j) += 1.0;
+        }
+
+        // update positions
+        MatrixXd newX = X + dt * (M.inverse() * L * X);
+
+        // apply new positions
+        idx = 0;
+        for (auto v = vertices.begin(); v != vertices.end(); ++v, ++idx) {
+            v->position.x = newX(idx, 0);
+            v->position.y = newX(idx, 1);
+            v->position.z = newX(idx, 2);
+        }
+
+        verticesUpdated = true;
     }
+
+
     void BubbleHGF::correctVolume() {
         double currentVolume = calculateVolume();
+        if (currentVolume <= 0.0) return;
         double scale = pow(this->volume / currentVolume, 1.0 / 3.0);
 
         // TODO:
         // Correct the volume of the bubble by adjusting the vertices
         // so that the volume is equal to this->volume,
         // probably just scale the vertices by the scale factor
+        double scale = pow(this->volume / currentVolume, 1.0 / 3.0);
+        Vector3D center(0.0, 0.0, 0.0);
+
+        // calc center of mass
+        for (auto v = vertices.begin(); v != vertices.end(); ++v) {
+            center += v->position;
+        }
+        center /= vertices.size();
+
+        // Scale vertices about center
+        for (auto v = vertices.begin(); v != vertices.end(); ++v) {
+            v->position = center + scale * (v->position - center);
+        }
+
+        verticesUpdated = true;
     }
 
 
@@ -193,10 +276,24 @@ namespace CGL {
         // TODO fill the ptrMesh->bubble_faces vector with the triangles which
         // are the faces of the bubble from this->parentHGF->faces, then use
         // BubbleBSDF for the BSDF of each triangle.
-        
+        ptrMesh->bubble_faces.reserve(parentHGF->faces.size());
+
+        // Create a BubbleBSDF material for all faces
+        BSDF* bubbleBSDF = new BubbleBSDF();
+
+        for (const auto& face : parentHGF->faces) {
+            // Get the three vertices of the triangle
+            Vector3D v0 = face->halfedge()->vertex()->position;
+            Vector3D v1 = face->halfedge()->next()->vertex()->position;
+            Vector3D v2 = face->halfedge()->next()->next()->vertex()->position;
+
+            // Create a triangle primitive with the BubbleBSDF
+            Triangle* triangle = new Triangle(v0, v1, v2, bubbleBSDF);
+            ptrMesh->bubble_faces.push_back(triangle);
+        }
 
         *ptr = ptrMesh;
-    }
+            }
     void HGFPathtracerCapture::update_cur_ptr(MeshablePathtracer **ptr) const {
         if (*ptr == nullptr) {
             create_ptr(ptr);
