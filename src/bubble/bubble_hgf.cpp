@@ -7,6 +7,8 @@
 
 namespace CGL {
 
+    using namespace Eigen;
+
     // TODO see header comment
     BubbleHGF::BubbleHGF() {
         // Initialize the HGF parameters
@@ -39,20 +41,21 @@ namespace CGL {
         // TODO:done
         // use divergence theorem on each face to calculate the volume Vtetr = (V0 DOT (v1 x v2) )
 
-    
+
             // Get v for each face
         for (FaceCIter f = faces.begin(); f != faces.end(); f++) {
             HalfedgeCIter h = f->halfedge();
-               Vector3D v0 = h->vertex()->position;
-               Vector3D v1 = h->next()->vertex()->position;
-               Vector3D v2 = h->next()->next()->vertex()->position;
+            Vector3D v0 = h->vertex()->position;
+            Vector3D v1 = h->next()->vertex()->position;
+            Vector3D v2 = h->next()->next()->vertex()->position;
 
             // calc the signed volume of the tetrahedron formed by the triangle and the origin
             double tetrahedronVolume = dot(v0, cross(v1, v2)) / 6.0;
             volume += tetrahedronVolume;
         }
+    }
 
-    void BubbleHGF::forwardKinesmatics() {
+    void BubbleHGF::forwardKinesmatics(double dt) {
 
 
         // TODO:
@@ -289,12 +292,16 @@ namespace CGL {
 
         for (const auto& face : parentHGF->faces) {
             // Get the three vertices of the triangle
-            Vector3D v0 = face->halfedge()->vertex()->position;
-            Vector3D v1 = face->halfedge()->next()->vertex()->position;
-            Vector3D v2 = face->halfedge()->next()->next()->vertex()->position;
+            Vector3D v0 = face.halfedge()->vertex()->position;
+            Vector3D v1 = face.halfedge()->next()->vertex()->position;
+            Vector3D v2 = face.halfedge()->next()->next()->vertex()->position;
+
+            Vector3D n1 = face.halfedge()->vertex()->normal;
+            Vector3D n2 = face.halfedge()->vertex()->normal;
+            Vector3D n3 = face.halfedge()->vertex()->normal;
 
             // Create a triangle primitive with the BubbleBSDF
-            Triangle* triangle = new Triangle(v0, v1, v2, bubbleBSDF);
+            Triangle* triangle = new Triangle(v0, v1, v2, n1, n2, n3, bubbleBSDF);
             ptrMesh->bubble_faces.push_back(triangle);
         }
 

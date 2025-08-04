@@ -90,4 +90,16 @@ namespace CGL {
 
         return true;
     }
+
+    void Triangle::draw(const Color &c, float alpha) const {
+
+    }
+
+    /**
+     * Draw outline with OpenGL (for visualization)
+     * \param c desired highlight color
+     */
+    void Triangle::drawOutline(const Color &c, float alpha) const {
+
+    }
 } // namespace CGL

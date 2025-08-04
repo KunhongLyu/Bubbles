@@ -62,6 +62,19 @@ namespace CGL {
          */
         BSDF *get_bsdf() const { return bsdf; }
 
+
+        /**
+         * Draw with OpenGL (for visualization)
+         * \param c desired highlight color
+         */
+        void draw(const Color &c, float alpha) const;
+
+        /**
+         * Draw outline with OpenGL (for visualization)
+         * \param c desired highlight color
+         */
+        void drawOutline(const Color &c, float alpha) const;
+
         Vector3D p1, p2, p3;
         Vector3D n1, n2, n3;
 
