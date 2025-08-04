@@ -12,7 +12,7 @@ namespace CGL {
     public:
         BubbleRenderer();
         ~BubbleRenderer();
-    }
+    };
 
 }
 

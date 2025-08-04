@@ -37,8 +37,6 @@ namespace CGL {
             void release_ptr(MeshBuffer *) const;
         private:
             BubbleHGF *parentHGF;
-
-            vector<float> vertices;
         };
 
 

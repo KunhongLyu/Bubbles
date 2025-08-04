@@ -26,7 +26,7 @@ namespace CGL {
 
 
     void BubbleHGF::update(double dt) {
-        forwardKinesmatics();
+        forwardKinesmatics(dt);
         correctVolume();
     }
 
@@ -41,7 +41,7 @@ namespace CGL {
         return volume;
     }
 
-    void BubbleHGF::forwardKinesmatics() {
+    void BubbleHGF::forwardKinesmatics(double dt) {
 
         // TODO:
         // Calculate the M, L, and X matrices, then
@@ -72,8 +72,17 @@ namespace CGL {
         return pathtracerCapture;
     }
 
+    class MeshCPUBuffer : public MeshBuffer {
+    public:
 
-    void HGFMeshCapture::create_ptr(MeshBuffer **ptr) const {
+        MeshCPUBuffer(const std::vector<ShaderInput> &inputFormat, void *vertexData, size_t vertexCount, void *indexData, InputType indexFormat, size_t indexCount, BufferUsage vertexUsage, BufferUsage indexUsage) :
+            MeshBuffer(inputFormat, vertexData, vertexCount, indexData, indexFormat, indexCount, vertexUsage, indexUsage) {}
+        ~MeshCPUBuffer() {};
+
+        vector<float> vertices;
+    };
+
+    void BubbleHGF::HGFMeshCapture::create_ptr(MeshBuffer **ptr) const {
         if (*ptr != nullptr)
             release_ptr(*ptr);
 
@@ -82,10 +91,11 @@ namespace CGL {
             { Type_Float, 3 }, // Normal
         };
 
-        vertices.clear();
+
+        vector<float> vertices;
         vector<uint32_t> indices;
 
-        map<VertexIter, uint32_t> vertexMap;
+        map<VertexCIter, uint32_t> vertexMap;
 
         vertices.reserve(parentHGF->vertices.size() * 6);
         indices.reserve(parentHGF->faces.size() * 3);
@@ -93,9 +103,9 @@ namespace CGL {
         int i = 0;
         for (auto v = parentHGF->vertices.begin(); v != parentHGF->vertices.end(); v++) {
 
-            vertices.push_back(v->x);
-            vertices.push_back(v->y);
-            vertices.push_back(v->z);
+            vertices.push_back(v->position.x);
+            vertices.push_back(v->position.y);
+            vertices.push_back(v->position.z);
 
             vertices.push_back(0.0f);
             vertices.push_back(0.0f);
@@ -106,17 +116,20 @@ namespace CGL {
         }
 
         for (const auto &f : parentHGF->faces) {
-            indices.push_back(vertexMap[f->halfedge()->vertex()]);
-            indices.push_back(vertexMap[f->halfedge()->next()->vertex()]);
-            indices.push_back(vertexMap[f->halfedge()->next()->next()->vertex()]);
+            indices.push_back(vertexMap[f.halfedge()->vertex()]);
+            indices.push_back(vertexMap[f.halfedge()->next()->vertex()]);
+            indices.push_back(vertexMap[f.halfedge()->next()->next()->vertex()]);
         }
 
-        *ptr = new MeshBuffer(inputFormat,
+        MeshCPUBuffer *meshBuffer = new MeshCPUBuffer(inputFormat,
             vertices.data(), parentHGF->vertices.size(),
             indices.data(), Type_UInt, indices.size(),
             Usage_DynamicDraw, Usage_StaticDraw);
+        meshBuffer->vertices = std::move(vertices);
+
+        *ptr = meshBuffer;
     }
-    void HGFMeshCapture::update_cur_ptr(MeshBuffer **ptr) const {
+    void BubbleHGF::HGFMeshCapture::update_cur_ptr(MeshBuffer **ptr) const {
         if (*ptr == nullptr) {
             create_ptr(ptr);
             return;
@@ -134,29 +147,28 @@ namespace CGL {
         if (!parentHGF->verticesUpdated)
             return;
 
+        MeshCPUBuffer *meshBuffer = static_cast<MeshCPUBuffer *>(*ptr);
+
         int i = 0;
         for (auto v = parentHGF->vertices.begin(); v != parentHGF->vertices.end(); v++) {
 
-            vertices[i * 6 + 0] = v->x;
-            vertices[i * 6 + 1] = v->y;
-            vertices[i * 6 + 2] = v->z;
+            meshBuffer->vertices[i * 6 + 0] = v->position.x;
+            meshBuffer->vertices[i * 6 + 1] = v->position.y;
+            meshBuffer->vertices[i * 6 + 2] = v->position.z;
 
             i++;
         }
 
-        if (*ptr == nullptr) {
-            throw std::runtime_error("MeshBuffer pointer is null.");
-        }
-        if ((*ptr)->vertexCount != parentHGF->vertices.size()) {
+        if ((*ptr)->getVertexCount() != parentHGF->nVertices()) {
             throw std::runtime_error("MeshBuffer vertex count mismatch.");
         }
-        if ((*ptr)->indexCount != parentHGF->faces.size() * 3) {
+        if ((*ptr)->getIndexCount() != parentHGF->nFaces() * 3) {
             throw std::runtime_error("MeshBuffer index count mismatch.");
         }
-        (*ptr)->updateVertex(vertices.data(), 0, parentHGF->vertices.size());
+        (*ptr)->updateVertex(meshBuffer->vertices.data(), 0, parentHGF->vertices.size());
         parentHGF->verticesUpdated = false;
     }
-    void HGFMeshCapture::release_ptr(MeshBuffer *ptr) const {
+    void BubbleHGF::HGFMeshCapture::release_ptr(MeshBuffer *ptr) const {
         if (ptr != nullptr) {
             delete ptr;
         }
@@ -183,7 +195,7 @@ namespace CGL {
     };
 
 
-    void HGFPathtracerCapture::create_ptr(MeshablePathtracer **ptr) const {
+    void BubbleHGF::HGFPathtracerCapture::create_ptr(MeshablePathtracer **ptr) const {
         if (*ptr != nullptr) {
             release_ptr(*ptr);
         }
@@ -197,7 +209,7 @@ namespace CGL {
 
         *ptr = ptrMesh;
     }
-    void HGFPathtracerCapture::update_cur_ptr(MeshablePathtracer **ptr) const {
+    void BubbleHGF::HGFPathtracerCapture::update_cur_ptr(MeshablePathtracer **ptr) const {
         if (*ptr == nullptr) {
             create_ptr(ptr);
             return;
@@ -216,7 +228,7 @@ namespace CGL {
             return;
 
 
-        BubblePathtracerMesh *ptrMesh = *ptr;
+        BubblePathtracerMesh *ptrMesh = static_cast<BubblePathtracerMesh *>(*ptr);
 
         // TODO
         // See HGFMeshCapture::update_cur_ptr for an example of how to update the
@@ -226,9 +238,9 @@ namespace CGL {
         // can probably reuse the logic from HGFMeshCapture::create_ptr
 
     }
-    void HGFPathtracerCapture::release_ptr(MeshablePathtracer *ptr) const {
+    void BubbleHGF::HGFPathtracerCapture::release_ptr(MeshablePathtracer *ptr) const {
         if (ptr != nullptr) {
-            BubblePathtracerMesh *ptrMesh = dynamic_cast<BubblePathtracerMesh *>(ptr);
+            BubblePathtracerMesh *ptrMesh = static_cast<BubblePathtracerMesh *>(ptr);
             delete ptrMesh;
         }
     }

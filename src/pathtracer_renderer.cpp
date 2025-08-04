@@ -52,7 +52,7 @@ namespace CGL {
         size_t samples_per_batch,
         float max_tolerance,
         bool use_roulette_stopping,
-        float roulette_prob = 0.2,
+        float roulette_prob,
         double lensRadius,
         double focalDistance) {
         state = INIT;
