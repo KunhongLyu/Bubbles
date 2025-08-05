@@ -4,6 +4,7 @@
 
 #include "application.h"
 #include "pathtracer/pathtracer.h"
+#include "bubble/bubble_hgf.h"
 
 
 using namespace CGL;
@@ -12,6 +13,10 @@ using namespace CGL;
 int main(int argc, char **argv) {
 
     Application *app = new Application();
+
+    BubbleHGF *bubbleDynamics = new BubbleHGF();
+
+    app->set_bubble_dynamics(bubbleDynamics);
 
     // create viewer
     Viewer viewer = Viewer();
@@ -24,6 +29,8 @@ int main(int argc, char **argv) {
 
     // start viewer
     viewer.start();
+
+    delete bubbleDynamics;
 }
 
 // 14:39

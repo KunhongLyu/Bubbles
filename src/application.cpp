@@ -213,7 +213,7 @@ namespace CGL {
     }
 
     void Application::forward_dynamics() {
-
+        bubbleDynamics->update(0.01);
     }
 
 
