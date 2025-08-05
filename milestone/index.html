@@ -29,7 +29,7 @@
 
     <div class="container">
         <h1>CS184 Spring 2025 Final Project: Realistic Bubble Simulation</h1>
-        <div style="text-align: center;">Names: Carl Sun, Isebella Hu, Kunhong Lyu, Sophia Liu</div>
+        <div style="text-align: center;">Names: Carl Sun, Isebella Hu, Kunhong Lyu</div>
 
         <h2>Milestone Report</h2>
 
@@ -37,11 +37,13 @@
         <p>We are currently implementing the core bubble dynamics simulation using a half-edge mesh data structure. Key accomplishments include:</p>
         <ul>
             <li>Established the code framework based on HW3, established the code architecture and outline tasks (huge thanks to Carl)</li>
-            <li> for the bubble class: 
+            <li>
+                for the bubble class:
                 <ul>
                     <li>Implemented bubble deformation via Laplacian smoothing  <code>dV = inv(M)*L*X</code> and <code>dX = V</code>.</li>
                     <li>Implemented bubble volume calculation using the divergence theorem on triangular faces and volume preservation scaling  <code>X_new = k*X, where k = pow(V0/V, 1/3)</code></li>
-                </ul></li>
+                </ul>
+            </li>
             <li>Path tracing integration with a custom <code>BubbleBSDF</code></li>
         </ul>
 
@@ -82,6 +84,9 @@
             </li>
             <li>Monday-Tuesday: Prepare final deliverables and presentation</li>
         </ul>
+
+        <h3>Milestone Presentation</h3>
+        <iframe src="https://docs.google.com/presentation/d/e/2PACX-1vRj4bMpPw23DB7-HYSOFgcEKPSNITOe-HOta2HY4lmzSXcCYI2QwjrscVq74uNBCLHCdazc6tRzAtwD/pubembed?start=false&loop=false&delayms=3000" frameborder="0" width="960" height="569" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
 
         <h3>Video Demonstration</h3>
         <p>Our milestone video will demonstrate the current simulation capabilities:</p>
