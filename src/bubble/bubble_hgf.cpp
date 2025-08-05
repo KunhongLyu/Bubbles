@@ -140,12 +140,6 @@ namespace CGL {
     }
 
 
-
-
-
-
-
-
     ObjPtrCapture<MeshBuffer> *BubbleHGF::getMeshCapture() const {
         return glMeshCapture;
     };
