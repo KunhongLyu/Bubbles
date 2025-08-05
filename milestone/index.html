@@ -26,15 +26,61 @@
     </style>
 </head>
 <body>
+
     <div class="container">
         <h1>CS184 Spring 2025 Final Project: Realistic Bubble Simulation</h1>
         <div style="text-align: center;">Names: Carl Sun, Isebella Hu, Kunhong Lyu, Sophia Liu</div>
 
-        <h2>Overview</h2>
-        In this project, we aim to create a realistic soap bubble simulation, capturing their dynamic motion under surface tension and rendering their iconic iridescent, rainbow-like appearance with ray tracing based techniques.
+        <h2>Milestone Report</h2>
 
+        <h3>Accomplishments</h3>
+        <p>We are currently implementing the core bubble dynamics simulation using a half-edge mesh data structure. Key accomplishments include:</p>
+        <ul>
+            <li>Established the code framework based on HW3, established the code architecture and outline tasks (huge thanks to Carl</li>
+            <li> for the bubble class: 
+            <ul>
+                <li>Implemented bubble volume calculation using the divergence theorem on triangular faces</li>
+                <li>Implemented bubble deformation via Laplacian smoothing (?X = M?¹LX) with volume preservation scaling (X???? = kX, k=(V?/V)^(1/3))</li>
+             <ul>
+            <li>Path tracing integration with a custom <code>BubbleBSDF</code></li>
+        </ul>
 
+        <h3>Preliminary Results</h3>
+        <p>While we haven't yet implemented the full rendering pipeline, our current implementation:</p>
+        <ul>
+            <li>Simulates bubble surface tension effects through Laplacian smoothing</li>
+            <li>Maintain volume conservation</li>
+            <li>calculate iridescence through our custom BSDF implementation</li>
+        </ul>
 
+        <h3>Progress Reflection</h3>
+        <p>Due to Exam 2 happening this Thursday, we're slightly behind schedule. The core dynamics implementation is complete, but we need to focus on:</p>
+        <ul>
+            <li>Enhancing the BSDF for more physically accurate iridescence</li>
+            <li>Improving the Laplacian matrix formulation for better surface tension simulation</li>
+            <li>Optimizing the mesh update pipeline (potential GPU acceleration)</li>
+            <li>Implementing environmental interactions (wind/collisions) if have time</li>
+        </ul>
+
+        <h3>Updated Work Plan</h3>
+        <ul>
+            <li>Complete rendering and testing by Friday night</li>
+            <li>
+                Use weekend for debugging and potential improvements:
+                <ul>
+                    <li>BSDF and simulation refinement</li>
+                    <li>Performance optimization</li>
+                </ul>
+            </li>
+            <li>Monday-Tuesday: Prepare final deliverables and presentation</li>
+        </ul>
+
+        <h3>Video Demonstration</h3>
+        <p>Our milestone video will demonstrate the current simulation capabilities:</p>
+        <div style="text-align: center;">
+            <iframe width="560" height="315" src="YOUR_VIDEO_URL" frameborder="0" allowfullscreen></iframe>
+        </div>
+    </div>
 </body>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
 <script>
