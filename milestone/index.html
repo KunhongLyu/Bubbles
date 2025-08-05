@@ -40,7 +40,7 @@
             <li> for the bubble class: 
             <ul>
                 <li>Implemented bubble volume calculation using the divergence theorem on triangular faces</li>
-                <li>Implemented bubble deformation via Laplacian smoothing (?X = M?¹LX) with volume preservation scaling (X???? = kX, k=(V?/V)^(1/3))</li>
+                <li>Implemented bubble deformation via Laplacian smoothing  <code>dX = inv(M)*L*X</code> with volume preservation scaling  <code>X_new = k*X, where k = pow(V0/V, 1/3)</code></li>
              <ul>
             <li>Path tracing integration with a custom <code>BubbleBSDF</code></li>
         </ul>
