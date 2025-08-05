@@ -42,7 +42,7 @@ namespace CGL {
         // use divergence theorem on each face to calculate the volume Vtetr = (V0 DOT (v1 x v2) )
 
 
-            // Get v for each face
+        // Get v for each face
         for (FaceCIter f = faces.begin(); f != faces.end(); f++) {
             HalfedgeCIter h = f->halfedge();
             Vector3D v0 = h->vertex()->position;
