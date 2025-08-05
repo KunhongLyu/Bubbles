@@ -18,5 +18,7 @@ namespace CGL {
 
         bool is_delta() const;
 
+        double refractive_index; // Refractive index of the bubble
+        double film_thickness; // Thickness of the bubble film in meters
     };
 }
