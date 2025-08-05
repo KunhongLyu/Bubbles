@@ -36,12 +36,12 @@
         <h3>Accomplishments</h3>
         <p>We are currently implementing the core bubble dynamics simulation using a half-edge mesh data structure. Key accomplishments include:</p>
         <ul>
-            <li>Established the code framework based on HW3, established the code architecture and outline tasks (huge thanks to Carl</li>
+            <li>Established the code framework based on HW3, established the code architecture and outline tasks (huge thanks to Carl)</li>
             <li> for the bubble class: 
-            <ul>
-                <li>Implemented bubble volume calculation using the divergence theorem on triangular faces</li>
-                <li>Implemented bubble deformation via Laplacian smoothing  <code>dX = inv(M)*L*X</code> with volume preservation scaling  <code>X_new = k*X, where k = pow(V0/V, 1/3)</code></li>
-             <ul>
+                <ul>
+                    <li>Implemented bubble deformation via Laplacian smoothing  <code>dV = inv(M)*L*X</code> and <code>dX = V</code>.</li>
+                    <li>Implemented bubble volume calculation using the divergence theorem on triangular faces and volume preservation scaling  <code>X_new = k*X, where k = pow(V0/V, 1/3)</code></li>
+                </ul></li>
             <li>Path tracing integration with a custom <code>BubbleBSDF</code></li>
         </ul>
 
@@ -55,6 +55,14 @@
 
         <h3>Progress Reflection</h3>
         <p>Due to Exam 2 happening this Thursday, we're slightly behind schedule. The core dynamics implementation is complete, but we need to focus on:</p>
+        <ul>
+            <li>
+                Bringing all individual pieces together to visualize everything to start the debugging process.
+                Specifically, we need to build a window GUI to be able to view the forward bubble dynamics, and to have a preliminary view of the path tracing result.
+            </li>
+            <li>Offline rendering and compiling path tracing images into a single video.</li>
+        </ul>
+        If time allows, we will focus on more advanced models to achieve the following:
         <ul>
             <li>Enhancing the BSDF for more physically accurate iridescence</li>
             <li>Improving the Laplacian matrix formulation for better surface tension simulation</li>
