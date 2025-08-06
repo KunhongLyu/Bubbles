@@ -6,6 +6,7 @@ namespace CGL {
     // TODO : Implement the Application class.
 
     Application::Application() {
+        bubbleDynamics = nullptr;
     }
 
     Application::~Application() {
@@ -17,8 +18,6 @@ namespace CGL {
             delete quad;
             quad = nullptr;
         }
-
-        remove_bubble_dynamics();
     }
 
     void Application::init() {
@@ -144,9 +143,29 @@ namespace CGL {
         scale = 1.0f;
 
         renderMode = Mode_Phong;
+        pathtracingMode = Pathtracing_Phong;
+        pt = nullptr;
+
+        global_light = new DirectionalLight(
+            Vector3D(1, 1, 1),  // color
+            Vector3D(-1, -1, -1).unit()  // direction
+        );
 
 
-        bubbleDynamics = nullptr;
+        double hFov = 50;
+        double vFov = 35;
+        double nClip = 0.01;
+        double fClip = 100;
+        camera.configure(hFov, vFov, nClip, fClip, screenW, screenH);
+
+        camera.place(
+            Vector3D(0, 0, 0),  // look©\at point
+            PI / 2,           // ¦Õ
+            0.0,              // ¦È
+            5.0,              // r
+            0.1,              // minR (¡Ü 5)
+            100.0             // maxR (¡Ý 5)
+        );
     }
 
     void Application::render() {
@@ -156,13 +175,13 @@ namespace CGL {
             render_pathtracer();
             break;
         case Mode_Phong:
-            render_phone();
+            render_phong();
             break;
         }
     }
 
 
-    void Application::render_phone() {
+    void Application::render_phong() {
         glClearColor(0, 0, 0, 0.0);
         glClear(GL_COLOR_BUFFER_BIT);
 
@@ -173,17 +192,25 @@ namespace CGL {
         GLint projloc = cubeShader->uniformLocation("projection");
 
 
-        Vector3D eyePos = Vector3D(0, 0, 3);
-        Vector3D eyeTarget = Vector3D(0, 0, 0);
-        Vector3D up = Vector3D(0, 1, 0);
+        Vector3D eyePos = camera.position();
+        Vector3D eyeTarget = camera.view_point();
+        Vector3D up = camera.up_dir();
+
         Matrix4x4 viewm = Matrix4x4::lookAt(eyePos, eyeTarget, up);
 
         double nearClip = 0.01;
         double farClip = 1000;
-        Matrix4x4 projm = Matrix4x4::perspective(45.0 * (PI / 180.0), screenW / ((double)screenH), nearClip, farClip);
+
+        Matrix4x4 projm = Matrix4x4::perspective(
+            camera.v_fov() * (PI / 180.0),
+            camera.aspect_ratio(),
+            camera.near_clip(),
+            camera.far_clip());
 
         Matrix4x4 model = Matrix4x4::rotateX(rotateX) * Matrix4x4::rotateY(rotateY);
         model = Matrix4x4::scale(scale, scale, scale) * model;
+
+        model = Matrix4x4::identity();
 
         cubeShader->setMat4x4(viewloc, viewm);
         cubeShader->setMat4x4(projloc, projm);
@@ -192,28 +219,46 @@ namespace CGL {
         glEnable(GL_DEPTH_TEST);
         cubeShader->useProgram();
 
-        auto bubbleMeshCapture = bubbleDynamics->getMeshCapture();
-        auto bubbleMesh = bubbleMeshCapture->capture();
-        bubbleMesh->draw();
+        if (bubbleDynamics != nullptr) {
+            auto bubbleMeshCapture = bubbleDynamics->getMeshCapture();
+            auto bubbleMesh = bubbleMeshCapture->capture();
+            bubbleMesh->draw();
+        } else {
+            cube->draw();
+        }
 
         cubeShader->removeProgram();
 
         draw_hud();
     }
     void Application::render_pathtracer() {
-
+        pt->update_screen();
     }
 
 
     void Application::start_pathtracer() {
+        if (pt == nullptr)
+            pt = new PathtracerRenderer();
+        
+        pathtracingMode == Pathtracing_Rendering;
+        scene.lights.clear();
+        scene.lights.push_back(global_light);
 
+        scene.scene = bubbleDynamics->getMeshPathtracerCapture();
+        pt->set_frame_size(screenW, screenH);
+        pt->set_scene(&scene);
+        pt->set_camera(&camera);
+        pt->start_raytracing();
     }
     void Application::stop_pathtracer() {
 
+        pathtracingMode == Pathtracing_Phong;
+        pt->stop();
     }
 
     void Application::forward_dynamics() {
         bubbleDynamics->update(0.01);
+        bubbleDynamics->getMeshCapture()->capture();
     }
 
 
@@ -221,6 +266,7 @@ namespace CGL {
         screenW = w;
         screenH = h;
         textManager.resize(w, h);
+        camera.set_screen_size(w, h);
     }
 
     string Application::name() {
@@ -253,6 +299,10 @@ namespace CGL {
         }
         if (scale > 10.0f) {
             scale = 10.0f; // Prevent scale from going too high
+        }
+
+        if (renderMode == Mode_Phong) {
+            camera.move_forward(-offset_y);
         }
     }
 
@@ -299,14 +349,24 @@ namespace CGL {
                 renderMode = Mode_Phong;
                 break;
             case 'f': case 'F':
-                forward_dynamics();
-                switch (renderMode) {
-                case Mode_Pathtracer:
-
-                    break;
-                case Mode_Phong:
-                    break;
+                if (renderMode == Mode_Phong) {
+                    forward_dynamics();
                 }
+                break;
+            case '[': case ']':
+            case '+': case '=':
+            case '-': case '_':
+            case '.': case '>':
+            case ',': case '<':
+            case 'h': case 'H':
+            case 'k': case 'K':
+            case 'l': case 'L':
+            case ';': case '\'':
+            case 'Q': case 'q':
+            case 'G': case 'g':
+                pt->stop();
+                pt->key_press(key);
+                pt->start_raytracing();
                 break;
             }
         }
@@ -343,10 +403,21 @@ namespace CGL {
         float verticalSensitivity = 0.01f;
         rotateY -= dx * horizontalSensitivity;
         rotateX += dy * verticalSensitivity;
+
+        if (renderMode == Mode_Phong) {
+            camera.rotate_by(-dy * (PI / screenH), -dx * (PI / screenW));
+        }
     }
 
     void Application::mouse2_dragged(float x, float y) {
 
+        float dx = (x - mouseX);
+        float dy = (y - mouseY);
+
+        // don't negate y because up is down.
+        if (renderMode == Mode_Phong) {
+            camera.move_by(-dx, dy, 10);
+        }
     }
 
     void Application::mouse_moved(float x, float y) {

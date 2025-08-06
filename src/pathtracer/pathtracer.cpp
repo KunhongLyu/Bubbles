@@ -131,8 +131,8 @@ namespace CGL {
     Vector3D PathTracer::one_bounce_radiance(const Ray &r,
         const Intersection &isect) {
 
-        if (direct_hemisphere_sample)
-            return estimate_direct_lighting_hemisphere(r, isect);
+        //if (direct_hemisphere_sample)
+        //    return estimate_direct_lighting_hemisphere(r, isect);
         return estimate_direct_lighting_importance(r, isect);
     }
 
@@ -218,6 +218,9 @@ namespace CGL {
         Intersection isect;
         Vector3D L_out;
 
+        if (!bvh->intersect(r, &isect))
+            return L_out;
+
         if (isect.t == INF_D)
             return debug_shading(r.d);
         //L_out += normal_shading(isect.n);
@@ -236,6 +239,10 @@ namespace CGL {
         Vector3D color;
         double s1 = 0, s2 = 0;
         //cout << "Rendering pixel (" << x << "," << y << ")" << endl;
+
+        if (x == 400 && y == 300) {
+            int aoiwghaogoaiw = 0;
+        }
 
         for (int i = 1; i <= num_samples; i++) {
             Vector2D pixel = origin + gridSampler->get_sample();

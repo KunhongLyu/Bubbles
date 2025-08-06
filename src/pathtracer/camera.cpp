@@ -200,4 +200,20 @@ namespace CGL {
         return r;
     }
 
+    Matrix4x4 Camera::get_view_matrix() const {
+        Matrix4x4 view(Matrix4x4::identity());
+
+        for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < 3; ++j) {
+                view(i, j) = c2w[j][i];
+            }
+        }
+
+        for (int i = 0; i < 3; ++i) {
+            view(i, 3) = -dot(Vector3D(c2w(i, 0), c2w(i, 1), c2w(i, 2)), pos);
+        }
+
+        return view;
+    }
+
 } // namespace CGL

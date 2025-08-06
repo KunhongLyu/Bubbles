@@ -19,6 +19,10 @@
 
 #include "bubble/bubble_dynamics.h"
 
+#include "pathtracer_renderer.h"
+
+#include "pathtracer/light.h"
+
 
 using namespace std;
 
@@ -47,7 +51,6 @@ namespace CGL {
         void keyboard_event(int key, int event, unsigned char mods);
 
         void set_bubble_dynamics(BubbleDynamics *bubbleDynamics);
-        void remove_bubble_dynamics();
 
     private:
         OSDText textManager;
@@ -82,11 +85,27 @@ namespace CGL {
             Mode_Phong,
         };
 
+        enum PathtracingMode {
+            Pathtracing_Phong,
+            Pathtracing_Ready,
+            Pathtracing_Rendering,
+            Pathtracing_Done,
+        };
+
         RenderMode renderMode;
+        PathtracingMode pathtracingMode;
 
         // Event handling //
 
-        void render_phone();
+        PathtracerRenderer *pt;
+
+        Scene scene;
+        Camera camera;
+
+        SceneLight *global_light;
+        
+
+        void render_phong();
         void render_pathtracer();
         void forward_dynamics();
 

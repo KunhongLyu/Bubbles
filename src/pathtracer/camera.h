@@ -68,6 +68,8 @@ namespace CGL {
 
         Ray generate_ray_for_thin_lens(double x, double y, double rndR, double rndTheta) const;
 
+        Matrix4x4 get_view_matrix() const;
+
         // Lens aperture and focal distance for depth of field effects.
         double lensRadius;
         double focalDistance;

@@ -5,6 +5,7 @@
 
 #include "bubble_dynamics.h"
 #include "halfEdgeMesh.h"
+#include <Eigen/Dense>
 
 
 namespace CGL {
@@ -18,6 +19,10 @@ namespace CGL {
         BubbleHGF();
         ~BubbleHGF();
         void update(double dt);
+
+        void build(const vector<vector<Index> > &polygons,
+            const vector<Vector3D> &vertexPositions,
+            const vector<Vector2D> &texcoords);
 
 
         ObjPtrCapture<MeshBuffer> *getMeshCapture() const;
@@ -56,6 +61,8 @@ namespace CGL {
 
         HGFMeshCapture *glMeshCapture;
         HGFPathtracerCapture *pathtracerCapture;
+
+        Eigen::MatrixXd V;
 
 
         double calculateVolume() const;

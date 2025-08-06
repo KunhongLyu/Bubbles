@@ -2,7 +2,8 @@
 #include "bubble_hgf.h"
 #include "../pathtracer/bubble_bsdf.h"
 #include "../pathtracer/triangle.h"
-#include <Eigen/Dense> 
+#include <unordered_map>
+#include <chrono>
 
 
 namespace CGL {
@@ -24,6 +25,19 @@ namespace CGL {
 
 
 
+
+
+    void BubbleHGF::build(const vector<vector<Index> > &polygons,
+        const vector<Vector3D> &vertexPositions,
+        const vector<Vector2D> &texcoords) {
+
+        HalfedgeMesh::build(polygons, vertexPositions, texcoords);
+
+        using namespace Eigen;
+
+        size_t n = nVertices();
+        V = MatrixXd(n, 3);
+    }
 
 
 
@@ -53,7 +67,22 @@ namespace CGL {
             double tetrahedronVolume = dot(v0, cross(v1, v2)) / 6.0;
             volume += tetrahedronVolume;
         }
+
+        return volume;
     }
+
+
+    struct VertexIterHash {
+        size_t operator()(const VertexIter &it) const noexcept {
+            return std::hash<const Vertex *>()(&*it);
+        }
+    };
+
+    struct VertexIterEq {
+        bool operator()(const VertexIter &a, const VertexIter &b) const noexcept {
+            return &*a == &*b;
+        }
+    };
 
     void BubbleHGF::forwardKinesmatics(double dt) {
 
@@ -66,42 +95,91 @@ namespace CGL {
         size_t n = vertices.size();
         if (n == 0) return;
 
+        auto start = std::chrono::high_resolution_clock::now();
+
         // Create vertex index map
-        std::unordered_map<VertexIter, size_t> vertexIndices;
+        std::unordered_map<VertexIter, size_t, VertexIterHash, VertexIterEq> vidx;
         size_t idx = 0;
         for (auto v = vertices.begin(); v != vertices.end(); ++v, ++idx) {
-            vertexIndices[v] = idx;
+            vidx[v] = idx;
         }
+        auto t1 = std::chrono::high_resolution_clock::now();
 
-        MatrixXd M = MatrixXd::Zero(n, n);  // Mass matrix
+        VectorXd M = VectorXd::Zero(n);  // Mass matrix
         MatrixXd L = MatrixXd::Zero(n, n);  // Laplacian matrix
         MatrixXd X(n, 3);                   // Position matrix
 
         //  mass matrix
-        double m = 1.0 / n;
-        for (size_t i = 0; i < n; ++i) {
-            M(i, i) = m;
+        for (FaceIter f = facesBegin(); f != facesEnd(); ++f) {
+            if (f->isBoundary()) continue;
+            HalfedgeIter h0 = f->halfedge();
+            HalfedgeIter h1 = h0->next();
+            HalfedgeIter h2 = h1->next();
+            // positions
+            Vector3D p0 = h0->vertex()->position;
+            Vector3D p1 = h1->vertex()->position;
+            Vector3D p2 = h2->vertex()->position;
+            // triangle area
+            double area = 0.5 * cross(p1 - p0, p2 - p0).norm();
+            // indices
+            int i0 = vidx[h0->vertex()];
+            int i1 = vidx[h1->vertex()];
+            int i2 = vidx[h2->vertex()];
+            double a3 = area / 3.0;
+            M(i0) += a3;
+            M(i1) += a3;
+            M(i2) += a3;
         }
+        for (size_t i = 0; i < n; ++i) {
+            M(i) = 1.0 / std::max(M(i), 1e-6);
+        }
+        auto t2 = std::chrono::high_resolution_clock::now();
+
+
+        //  Laplacian matrix
+        for (EdgeIter e = edgesBegin(); e != edgesEnd(); ++e) {
+            HalfedgeIter h = e->halfedge();
+            if (h->isBoundary() || h->twin()->isBoundary()) continue;
+
+            // vertices on either side of the edge
+            int i = vidx[h->vertex()];
+            int j = vidx[h->twin()->vertex()];
+
+            // opposite angles alpha, beta
+            auto cotangent = [](HalfedgeIter h) {
+                // in h->face(), angle at the vertex opposite the edge h
+                Vector3D a = h->next()->vertex()->position - h->vertex()->position;
+                Vector3D b = h->next()->next()->vertex()->position - h->vertex()->position;
+                // cot = (a¡¤b) / |a¡Áb|
+                return dot(a, b) / cross(a, b).norm();
+                };
+            double cotA = cotangent(h->next());
+            double cotB = cotangent(h->twin()->next());
+            double w = 0.5 * (cotA + cotB);
+
+            // accumulate into L
+            L(i, j) -= w;
+            L(j, i) -= w;
+            L(i, i) += w;
+            L(j, j) += w;
+        }
+        auto t3 = std::chrono::high_resolution_clock::now();
 
         //  position matrix
         idx = 0;
         for (auto v = vertices.begin(); v != vertices.end(); ++v, ++idx) {
-            X.row(idx) << v->position.x, v->position.y, v->position.z;
+            const auto &p = v->position;
+            X(idx, 0) = p.x;  X(idx, 1) = p.y;  X(idx, 2) = p.z;
         }
 
-        //  Laplacian matrix
-        for (auto e = edges.begin(); e != edges.end(); ++e) {
-            size_t i = vertexIndices[e->halfedge()->vertex()];
-            size_t j = vertexIndices[e->halfedge()->twin()->vertex()];
-            L(i, j) = -1.0;
-            L(j, i) = -1.0;
-            L(i, i) += 1.0;
-            L(j, j) += 1.0;
-        }
+        auto t4 = std::chrono::high_resolution_clock::now();
 
         // update positions
-        MatrixXd newX = X + dt * (M.inverse() * L * X);
+        MatrixXd newV = V + dt * (M.asDiagonal() * L * X);
+        MatrixXd newX = X + dt * V;
 
+        V = newV;
+        
         // apply new positions
         idx = 0;
         for (auto v = vertices.begin(); v != vertices.end(); ++v, ++idx) {
@@ -109,8 +187,16 @@ namespace CGL {
             v->position.y = newX(idx, 1);
             v->position.z = newX(idx, 2);
         }
+        auto t5 = std::chrono::high_resolution_clock::now();
 
         verticesUpdated = true;
+
+        auto calcTime = [](std::chrono::nanoseconds s) { cout << std::chrono::duration<double>(s).count() << endl; };
+        calcTime(t1 - start);
+        calcTime(t2 - t1);
+        calcTime(t3 - t2);
+        calcTime(t4 - t3);
+        calcTime(t5 - t4);
     }
 
 
@@ -182,13 +268,35 @@ namespace CGL {
             vertices.push_back(v->position.y);
             vertices.push_back(v->position.z);
 
-            vertices.push_back(0.0f);
-            vertices.push_back(0.0f);
-            vertices.push_back(1.0f);
+
+            vertices.push_back(v->normal.x);
+            vertices.push_back(v->normal.y);
+            vertices.push_back(v->normal.z);
 
             vertexMap[v] = i;
             i++;
         }
+
+        auto addVertexNormal = [](vector<float> &verts, const Vector3D pos, const Vector3D normal) {
+            verts.push_back(pos.x);
+            verts.push_back(pos.y);
+            verts.push_back(pos.z);
+            verts.push_back(normal.x);
+            verts.push_back(normal.y);
+            verts.push_back(normal.z);
+            };
+
+        int nowN = vertices.size() / 6;
+        addVertexNormal(vertices, Vector3D(-1, -1, -1), Vector3D(0, 0, 1));
+        addVertexNormal(vertices, Vector3D(1, -1, -1), Vector3D(0, 0, 1));
+        addVertexNormal(vertices, Vector3D(1, 1, -1), Vector3D(0, 0, 1));
+        addVertexNormal(vertices, Vector3D(-1, 1, -1), Vector3D(0, 0, 1));
+
+        addVertexNormal(vertices, Vector3D(-1, -1, -1), Vector3D(0, 1, 0));
+        addVertexNormal(vertices, Vector3D(1, -1, -1), Vector3D(0, 1, 0));
+        addVertexNormal(vertices, Vector3D(1, -1, 1), Vector3D(0, 1, 0));
+        addVertexNormal(vertices, Vector3D(-1, -1, 1), Vector3D(0, 1, 0));
+
 
         for (const auto &f : parentHGF->faces) {
             indices.push_back(vertexMap[f.halfedge()->vertex()]);
@@ -196,8 +304,23 @@ namespace CGL {
             indices.push_back(vertexMap[f.halfedge()->next()->next()->vertex()]);
         }
 
+        indices.push_back(nowN);
+        indices.push_back(nowN+1);
+        indices.push_back(nowN+2);
+        indices.push_back(nowN);
+        indices.push_back(nowN+2);
+        indices.push_back(nowN+3);
+        indices.push_back(nowN+4);
+        indices.push_back(nowN+5);
+        indices.push_back(nowN+6);
+        indices.push_back(nowN+4);
+        indices.push_back(nowN+6);
+        indices.push_back(nowN+7);
+
+
+
         MeshCPUBuffer *meshBuffer = new MeshCPUBuffer(inputFormat,
-            vertices.data(), parentHGF->vertices.size(),
+            vertices.data(), parentHGF->vertices.size()+8,
             indices.data(), Type_UInt, indices.size(),
             Usage_DynamicDraw, Usage_StaticDraw);
         meshBuffer->vertices = std::move(vertices);
@@ -231,6 +354,10 @@ namespace CGL {
             meshBuffer->vertices[i * 6 + 1] = v->position.y;
             meshBuffer->vertices[i * 6 + 2] = v->position.z;
 
+            meshBuffer->vertices[i * 6 + 3] = v->normal.x;
+            meshBuffer->vertices[i * 6 + 4] = v->normal.y;
+            meshBuffer->vertices[i * 6 + 5] = v->normal.z;
+
             i++;
         }
 
@@ -245,7 +372,8 @@ namespace CGL {
     }
     void BubbleHGF::HGFMeshCapture::release_ptr(MeshBuffer *ptr) const {
         if (ptr != nullptr) {
-            delete ptr;
+            MeshCPUBuffer *meshBuffer = static_cast<MeshCPUBuffer *>(ptr);
+            delete meshBuffer;
         }
     }
 
@@ -267,6 +395,7 @@ namespace CGL {
         }
 
         vector<Primitive *> bubble_faces;
+        DiffuseBSDF *bubbleBSDF;
     };
 
 
@@ -280,10 +409,10 @@ namespace CGL {
         // TODO fill the ptrMesh->bubble_faces vector with the triangles which
         // are the faces of the bubble from this->parentHGF->faces, then use
         // BubbleBSDF for the BSDF of each triangle.
-        ptrMesh->bubble_faces.reserve(parentHGF->faces.size());
+        ptrMesh->bubble_faces.reserve(parentHGF->faces.size() + 4);
 
         // Create a BubbleBSDF material for all faces
-        BSDF* bubbleBSDF = new BubbleBSDF();
+        ptrMesh->bubbleBSDF = new DiffuseBSDF(Vector3D(1, 1, 1));
 
         for (const auto& face : parentHGF->faces) {
             // Get the three vertices of the triangle
@@ -292,13 +421,23 @@ namespace CGL {
             Vector3D v2 = face.halfedge()->next()->next()->vertex()->position;
 
             Vector3D n1 = face.halfedge()->vertex()->normal;
-            Vector3D n2 = face.halfedge()->vertex()->normal;
-            Vector3D n3 = face.halfedge()->vertex()->normal;
+            Vector3D n2 = face.halfedge()->next()->vertex()->normal;
+            Vector3D n3 = face.halfedge()->next()->next()->vertex()->normal;
 
             // Create a triangle primitive with the BubbleBSDF
-            Triangle* triangle = new Triangle(v0, v1, v2, n1, n2, n3, bubbleBSDF);
+            Triangle* triangle = new Triangle(v0, v1, v2, n1, n2, n3, ptrMesh->bubbleBSDF);
             ptrMesh->bubble_faces.push_back(triangle);
         }
+
+        ptrMesh->bubble_faces.push_back(new Triangle(Vector3D(-1, -1, -1), Vector3D(1, -1, -1), Vector3D(1, 1, -1),
+            Vector3D(0, 0, 1), Vector3D(0, 0, 1), Vector3D(0, 0, 1), ptrMesh->bubbleBSDF));
+        ptrMesh->bubble_faces.push_back(new Triangle(Vector3D(-1, -1, -1), Vector3D(1, 1, -1), Vector3D(-1, 1, -1),
+            Vector3D(0, 0, 1), Vector3D(0, 0, 1), Vector3D(0, 0, 1), ptrMesh->bubbleBSDF));
+
+        ptrMesh->bubble_faces.push_back(new Triangle(Vector3D(-1, -1, -1), Vector3D(1, -1, -1), Vector3D(1, -1, 1),
+            Vector3D(0, 1, 0), Vector3D(0, 1, 0), Vector3D(0, 1, 0), ptrMesh->bubbleBSDF));
+        ptrMesh->bubble_faces.push_back(new Triangle(Vector3D(-1, -1, -1), Vector3D(1, -1, 1), Vector3D(-1, -1, 1),
+            Vector3D(0, 1, 0), Vector3D(0, 1, 0), Vector3D(0, 1, 0), ptrMesh->bubbleBSDF));
 
         *ptr = ptrMesh;
     }
@@ -334,6 +473,7 @@ namespace CGL {
     void BubbleHGF::HGFPathtracerCapture::release_ptr(MeshablePathtracer *ptr) const {
         if (ptr != nullptr) {
             BubblePathtracerMesh *ptrMesh = static_cast<BubblePathtracerMesh *>(ptr);
+            delete ptrMesh->bubbleBSDF;
             delete ptrMesh;
         }
     }

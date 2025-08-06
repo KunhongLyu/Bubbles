@@ -18,7 +18,7 @@ namespace CGL {
         // TODO (part 1) (done
         // probably just use sample_f instead of this function
 		//dont have one for delta distributions, use the sample_f function
-        return Vector3D(0, 0, 0);
+        return Vector3D(1, 1, 1);
     }
 
     Vector3D BubbleBSDF::sample_f(const Vector3D wo, Vector3D *wi, double *pdf) {

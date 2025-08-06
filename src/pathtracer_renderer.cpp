@@ -182,7 +182,6 @@ namespace CGL {
      * the BVH visualization with OpenGL.
      */
     void PathtracerRenderer::update_screen() {
-        // to edit
         switch (state) {
         case INIT:
         case READY:
@@ -209,7 +208,6 @@ namespace CGL {
      * Transitions from any running state to READY.
      */
     void PathtracerRenderer::stop() {
-        // to edit
         switch (state) {
         case INIT:
         case READY:
@@ -353,6 +351,7 @@ namespace CGL {
         cout << "[PathTracer] Building BVH" << endl;
         fflush(stdout);
         timer.start();
+        scene->scene->capture();
         bvh = new BVHAccel(scene->scene);
         timer.stop();
         fprintf(stdout, "Done! (%.4f sec)\n", timer.duration());
