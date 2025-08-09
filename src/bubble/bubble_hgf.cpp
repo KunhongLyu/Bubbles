@@ -372,8 +372,10 @@ namespace CGL {
 
         if (parentHGF->topologyUpdated) {
             parentHGF->topologyUpdated = false;
+            parentHGF->verticesUpdated = false;
             if (*ptr != nullptr) {
                 release_ptr(*ptr);
+                *ptr = nullptr;
             }
             create_ptr(ptr);
             return;
@@ -410,7 +412,7 @@ namespace CGL {
     void BubbleHGF::HGFMeshCapture::release_ptr(MeshBuffer *ptr) const {
         if (ptr != nullptr) {
             MeshCPUBuffer *meshBuffer = (MeshCPUBuffer *)(ptr);
-            delete ptr;
+            delete meshBuffer;
         }
     }
 
