@@ -12,13 +12,13 @@ namespace CGL {
     public:
         ObjPtrCapture() : cur_ptr(nullptr) {};
         ~ObjPtrCapture() {
-            release();
         }
         const T *capture() {
             if (cur_ptr == nullptr) {
                 create_ptr(&cur_ptr);
+            } else {
+                update_cur_ptr(&cur_ptr);
             }
-            update_cur_ptr(&cur_ptr);
             return cur_ptr;
         }
         const T *current() {

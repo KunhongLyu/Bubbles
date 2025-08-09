@@ -51,7 +51,6 @@ Viewer::~Viewer() {
   glfwDestroyWindow(window);
   glfwTerminate();
   // free resources
-  delete renderer;
   delete osd_text;
 }
 

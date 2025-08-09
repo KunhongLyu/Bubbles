@@ -320,41 +320,6 @@ namespace CGL {
             indices.push_back(vertexMap[f.halfedge()->next()->next()->vertex()]);
         }
 
-        //auto addVertexNormal = [](vector<float> &verts, const Vector3D pos, const Vector3D normal) {
-        //    verts.push_back(pos.x);
-        //    verts.push_back(pos.y);
-        //    verts.push_back(pos.z);
-        //    verts.push_back(normal.x);
-        //    verts.push_back(normal.y);
-        //    verts.push_back(normal.z);
-        //    };
-        //
-        //int nowN = vertices.size() / 6;
-        //addVertexNormal(vertices, Vector3D(-1, -1, -1), Vector3D(0, 0, 1));
-        //addVertexNormal(vertices, Vector3D(1, -1, -1), Vector3D(0, 0, 1));
-        //addVertexNormal(vertices, Vector3D(1, 1, -1), Vector3D(0, 0, 1));
-        //addVertexNormal(vertices, Vector3D(-1, 1, -1), Vector3D(0, 0, 1));
-        //
-        //addVertexNormal(vertices, Vector3D(-1, -1, -1), Vector3D(0, 1, 0));
-        //addVertexNormal(vertices, Vector3D(1, -1, -1), Vector3D(0, 1, 0));
-        //addVertexNormal(vertices, Vector3D(1, -1, 1), Vector3D(0, 1, 0));
-        //addVertexNormal(vertices, Vector3D(-1, -1, 1), Vector3D(0, 1, 0));
-
-
-        //indices.push_back(nowN);
-        //indices.push_back(nowN+1);
-        //indices.push_back(nowN+2);
-        //indices.push_back(nowN);
-        //indices.push_back(nowN+2);
-        //indices.push_back(nowN+3);
-        //indices.push_back(nowN+4);
-        //indices.push_back(nowN+5);
-        //indices.push_back(nowN+6);
-        //indices.push_back(nowN+4);
-        //indices.push_back(nowN+6);
-        //indices.push_back(nowN+7);
-
-
 
         MeshCPUBuffer *meshBuffer = new MeshCPUBuffer(inputFormat,
             vertices.data(), parentHGF->vertices.size(),
@@ -467,16 +432,6 @@ namespace CGL {
             Triangle* triangle = new Triangle(v0, v1, v2, n1, n2, n3, ptrMesh->bubbleBSDF);
             ptrMesh->bubble_faces.push_back(triangle);
         }
-
-        //ptrMesh->bubble_faces.push_back(new Triangle(Vector3D(-1, -1, -1), Vector3D(1, -1, -1), Vector3D(1, 1, -1),
-        //    Vector3D(0, 0, 1), Vector3D(0, 0, 1), Vector3D(0, 0, 1), ptrMesh->bubbleBSDF));
-        //ptrMesh->bubble_faces.push_back(new Triangle(Vector3D(-1, -1, -1), Vector3D(1, 1, -1), Vector3D(-1, 1, -1),
-        //    Vector3D(0, 0, 1), Vector3D(0, 0, 1), Vector3D(0, 0, 1), ptrMesh->bubbleBSDF));
-        //
-        //ptrMesh->bubble_faces.push_back(new Triangle(Vector3D(-1, -1, -1), Vector3D(1, -1, -1), Vector3D(1, -1, 1),
-        //    Vector3D(0, 1, 0), Vector3D(0, 1, 0), Vector3D(0, 1, 0), ptrMesh->bubbleBSDF));
-        //ptrMesh->bubble_faces.push_back(new Triangle(Vector3D(-1, -1, -1), Vector3D(1, -1, 1), Vector3D(-1, -1, 1),
-        //    Vector3D(0, 1, 0), Vector3D(0, 1, 0), Vector3D(0, 1, 0), ptrMesh->bubbleBSDF));
 
         *ptr = ptrMesh;
     }

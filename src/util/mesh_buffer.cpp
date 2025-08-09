@@ -73,7 +73,9 @@ namespace CGL {
 
     }
     MeshBuffer::~MeshBuffer() {
-
+        glDeleteBuffers(1, &vbo);
+        glDeleteBuffers(1, &ebo);
+        glDeleteVertexArrays(1, &vao);
     }
 
     void MeshBuffer::updateVertex(void *vertexData, size_t startIndex, size_t numVertex) {

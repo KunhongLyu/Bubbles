@@ -34,7 +34,7 @@ namespace CGL {
         class HGFMeshCapture : public ObjPtrCapture<MeshBuffer> {
         public:
             HGFMeshCapture(BubbleHGF *parentHGF) : parentHGF(parentHGF) {}
-            ~HGFMeshCapture() {};
+            ~HGFMeshCapture() { release(); };
 
         protected:
             void create_ptr(MeshBuffer **) const;
@@ -48,7 +48,7 @@ namespace CGL {
         class HGFPathtracerCapture : public ObjPtrCapture<MeshablePathtracer> {
         public:
             HGFPathtracerCapture(BubbleHGF *parentHGF) : parentHGF(parentHGF) {}
-            ~HGFPathtracerCapture() {};
+            ~HGFPathtracerCapture() { release(); };
 
         protected:
             void create_ptr(MeshablePathtracer **) const;
