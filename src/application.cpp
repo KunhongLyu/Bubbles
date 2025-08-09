@@ -166,6 +166,8 @@ namespace CGL {
             0.1,              // minR (¡Ü 5)
             100.0             // maxR (¡Ý 5)
         );
+
+        renderWireframe = false;
     }
 
     void Application::render() {
@@ -222,7 +224,20 @@ namespace CGL {
         if (bubbleDynamics != nullptr) {
             auto bubbleMeshCapture = bubbleDynamics->getMeshCapture();
             auto bubbleMesh = bubbleMeshCapture->capture();
+
+            set_phong_color();
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
             bubbleMesh->draw();
+
+            if (renderWireframe) {
+                glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+                set_const_color();
+                float s = 1.002f;
+                cubeShader->setMat4x4(modelloc, Matrix4x4::scale(s, s, s));
+                cubeShader->useProgram();
+                bubbleMesh->draw();
+                glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+            }
         } else {
             cube->draw();
         }
@@ -233,6 +248,50 @@ namespace CGL {
     }
     void Application::render_pathtracer() {
         pt->update_screen();
+    }
+
+    void Application::set_phong_color() {
+
+        GLint lightDirLoc = cubeShader->uniformLocation("lightDir");
+        GLint lightColorLoc = cubeShader->uniformLocation("lightColor");
+        GLint viewPosLoc = cubeShader->uniformLocation("viewPos");
+        GLint ambientColorLoc = cubeShader->uniformLocation("ambientColor");
+        GLint diffuseColorLoc = cubeShader->uniformLocation("diffuseColor");
+        GLint specularColorLoc = cubeShader->uniformLocation("specularColor");
+        GLint shininessLoc = cubeShader->uniformLocation("shininess");
+
+        Vector3D light_direction_world = Vector3D(-0.5, -1, -1).unit(); // direction toward light source
+        Vector3D light_color = Vector3D(1.0, 1.0, 1.0);
+        Vector3D ambient_color = Vector3D(0.1, 0.1, 0.1);
+        Vector3D diffuse_color = Vector3D(1.0, 1.0, 1.0);
+        Vector3D specular_color = Vector3D(1.0, 1.0, 1.0);
+        float shininess = 64.0f;
+        Vector3D camera_pos = Vector3D(0.0, 0.0, 2.0);
+
+        // upload them
+        cubeShader->setVec3(lightDirLoc, light_direction_world);    // shader negates it internally
+        cubeShader->setVec3(lightColorLoc, light_color);
+        cubeShader->setVec3(ambientColorLoc, ambient_color);
+        cubeShader->setVec3(diffuseColorLoc, diffuse_color);
+        cubeShader->setVec3(specularColorLoc, specular_color);
+        cubeShader->setVec1(shininessLoc, shininess);
+        cubeShader->setVec3(viewPosLoc, camera_pos);
+    }
+
+    void Application::set_const_color() {
+        GLint ambientColorLoc = cubeShader->uniformLocation("ambientColor");
+        GLint diffuseColorLoc = cubeShader->uniformLocation("diffuseColor");
+        GLint specularColorLoc = cubeShader->uniformLocation("specularColor");
+        GLint shininessLoc = cubeShader->uniformLocation("shininess");
+
+        Vector3D color = Vector3D(1, 0, 0);
+        float shininess = 64.0f;
+
+        // upload them
+        cubeShader->setVec3(ambientColorLoc, color);
+        cubeShader->setVec3(diffuseColorLoc, color);
+        cubeShader->setVec3(specularColorLoc, color);
+        cubeShader->setVec1(shininessLoc, shininess);
     }
 
 
@@ -352,6 +411,9 @@ namespace CGL {
                 if (renderMode == Mode_Phong) {
                     forward_dynamics();
                 }
+                break;
+            case 'm': case 'M':
+                renderWireframe = !renderWireframe;
                 break;
             case '[': case ']':
             case '+': case '=':

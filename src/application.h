@@ -77,6 +77,8 @@ namespace CGL {
         bool rightDown;
         bool middleDown;
 
+        bool renderWireframe;
+
         float rotateX, rotateY;
         float scale;
 
@@ -111,6 +113,9 @@ namespace CGL {
 
         void start_pathtracer();
         void stop_pathtracer();
+
+        void set_phong_color();
+        void set_const_color();
 
         // HUD
         bool show_hud;

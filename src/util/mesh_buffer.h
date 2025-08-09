@@ -44,7 +44,7 @@ namespace CGL {
     class MeshBuffer {
     public:
         MeshBuffer(const std::vector<ShaderInput> &inputFormat, void *vertexData, size_t vertexCount, void *indexData, InputType indexFormat, size_t indexCount, BufferUsage vertexUsage, BufferUsage indexUsage);
-        ~MeshBuffer();
+        virtual ~MeshBuffer();
 
         void updateVertex(void *vertexData, size_t startIndex, size_t numVertex);
         void updateIndex(void *indexData, size_t startIndex, size_t numIndex);
