@@ -60,9 +60,90 @@ namespace CGL {
 
         // TODO:
         // maybe use tthe isotropic remeshing algorithm?
+        const int outerIterations = 5;
+        const int smoothingSteps = 10;
+        const double maxEdgeRatio = 4.0 / 3.0;
+        const double minEdgeRatio = 4.0 / 5.0;
+        double meanEdgeLength = calculateMeanEdgeLength();
 
+
+        for (int i = 0; i < outerIterations; i++) {
+            splitLongEdges(meanEdgeLength * maxEdgeRatio);
+            //collapseShortEdges(meanEdgeLength * minEdgeRatio);
+            /*flipEdgesForDegree();
+
+            for (int j = 0; j < smoothingSteps; j++) {
+                tangentialSmoothing(0.2); 
+            }
+            */
+            meanEdgeLength = calculateMeanEdgeLength();
+        }
         this->topologyUpdated = true;
+   
     }
+
+
+    double BubbleHGF::calculateMeanEdgeLength() const {
+        double totalLength = 0.0;
+        int edgeCount = 0;
+
+        for (EdgeCIter e = edgesBegin(); e != edgesEnd(); ++e) {
+            totalLength += e->length();
+            edgeCount++;
+        }
+
+        return totalLength / edgeCount;
+    }
+
+
+    void BubbleHGF::splitLongEdges(double threshold) {
+        vector<EdgeIter> edgesToSplit;
+
+        for (EdgeIter e = edgesBegin(); e != edgesEnd(); ++e) {
+            if (e->length() > threshold) {
+                edgesToSplit.push_back(e);
+            }
+        }
+        std::cout << "Found " << edgesToSplit.size() << " edges to split" << std::endl;
+
+        for (EdgeIter e : edgesToSplit) {
+            Vector3D midPoint = 0.5 * (e->halfedge()->vertex()->position +
+                e->halfedge()->twin()->vertex()->position);
+
+            VertexIter newVert = splitEdge(e);
+            newVert->position = midPoint;
+            newVert->computeNormal();
+        }
+    }
+
+    void BubbleHGF::collapseShortEdges(double threshold) {
+        vector<EdgeIter> edgesToCollapse;
+
+        for (EdgeIter e = edgesBegin(); e != edgesEnd(); ++e) {
+            if (e->length() < threshold && !e->isBoundary()) {
+                edgesToCollapse.push_back(e);
+            }
+        }
+        std::cout << "Found " << edgesToCollapse.size() << " edges to collapse" << std::endl;
+
+        for (EdgeIter e : edgesToCollapse) {
+            Vector3D avgPos = 0.5 * (e->halfedge()->vertex()->position +
+                e->halfedge()->twin()->vertex()->position);
+
+            VertexIter newVert = collapseEdge(e); 
+              newVert->position = avgPos;
+              newVert->computeNormal();
+
+            }
+    }
+
+
+
+
+
+
+
+
 
 
 
@@ -482,6 +563,7 @@ namespace CGL {
     }
     void BubbleHGF::HGFPathtracerCapture::update_cur_ptr(MeshablePathtracer **ptr) const {
         if (*ptr == nullptr) {
+            release_ptr(*ptr);
             create_ptr(ptr);
             return;
         }
@@ -507,6 +589,7 @@ namespace CGL {
         // Basically here just update all the triangles in ptrMesh->bubble_faces
         // with the vertices from parentHGF->vertices.
         // can probably reuse the logic from HGFMeshCapture::create_ptr
+      
 
     }
     void BubbleHGF::HGFPathtracerCapture::release_ptr(MeshablePathtracer *ptr) const {
