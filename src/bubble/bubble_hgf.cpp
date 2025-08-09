@@ -14,7 +14,7 @@ namespace CGL {
         // Initialize the HGF parameters
         glMeshCapture = new HGFMeshCapture(this);
         pathtracerCapture = new HGFPathtracerCapture(this);
-
+        
     }
     BubbleHGF::~BubbleHGF() {
         // Cleanup if necessary
@@ -38,6 +38,8 @@ namespace CGL {
         size_t n = nVertices();
         V = MatrixXd::Zero(n, 3);
         this->volume = calculateVolume();
+
+        sinceLastUpdate = 0.0;
     }
 
 
@@ -45,6 +47,21 @@ namespace CGL {
     void BubbleHGF::update(double dt) {
         forwardKinesmatics(dt);
         correctVolume();
+
+        sinceLastUpdate += dt;
+
+        if (sinceLastUpdate > 0.1) {
+            regularizeMesh();
+            sinceLastUpdate = 0.0;
+        }
+    }
+
+    void BubbleHGF::regularizeMesh() {
+
+        // TODO:
+        // maybe use tthe isotropic remeshing algorithm?
+
+        this->topologyUpdated = true;
     }
 
 
@@ -432,7 +449,7 @@ namespace CGL {
         ptrMesh->bubble_faces.reserve(parentHGF->faces.size() + 4);
 
         // Create a BubbleBSDF material for all faces
-        ptrMesh->bubbleBSDF = new BubbleBSDF(Vector3D(1, 1, 1));
+        ptrMesh->bubbleBSDF = new BubbleBSDF();
 
         for (const auto& face : parentHGF->faces) {
             // Get the three vertices of the triangle

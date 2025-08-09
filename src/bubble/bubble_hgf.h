@@ -68,6 +68,9 @@ namespace CGL {
         double calculateVolume() const;
         void forwardKinesmatics(double dt);
         void correctVolume();
+        void regularizeMesh();
+
+        double sinceLastUpdate;
         
 
         double volume; // volume of the bubble, kept constant
