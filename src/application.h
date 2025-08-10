@@ -52,6 +52,9 @@ namespace CGL {
 
         void set_bubble_dynamics(BubbleDynamics *bubbleDynamics);
 
+        void start_pathtracer();
+        void stop_pathtracer();
+
     private:
         OSDText textManager;
 
@@ -111,8 +114,6 @@ namespace CGL {
         void render_pathtracer();
         void forward_dynamics();
 
-        void start_pathtracer();
-        void stop_pathtracer();
 
         void set_phong_color();
         void set_const_color();

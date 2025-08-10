@@ -85,6 +85,9 @@ int main(int argc, char **argv) {
     // start viewer
     viewer.start();
 
+    app->stop_pathtracer();
+
+
     delete app;
 
     delete bubbleDynamics;
