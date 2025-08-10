@@ -4,7 +4,7 @@
 #include "../pathtracer/triangle.h"
 #include <unordered_map>
 #include <chrono>
-
+#include <algorithm>
 
 namespace CGL {
 
@@ -22,7 +22,7 @@ namespace CGL {
         delete pathtracerCapture;
     }
 
-
+    Eigen::VectorXd Minv;
 
 
 

@@ -62,28 +62,25 @@ namespace CGL {
         // This should incorporate the bubble surface bsdf.
         // I think maybe choose 50% 50% to reflect or refract.
         // Maybe the probability isn¡¯t 50% 50%, we¡¯ll have to look.
-            // 1) 基本几何
         double cos_i = wo.z;
         bool entering = cos_i > 0.0;
         double n_air = 1.0, n_film = refractive_index;
         double d = film_thickness;
 
-        // 三个代表波长
         const double lam[3] = { 700e-9, 546.1e-9, 435.8e-9 };
         Vector3D R_rgb;
         for (int c = 0; c < 3; ++c) R_rgb[c] = thin_film_reflectance(cos_i, n_air, n_film, d, lam[c]);
         Vector3D T_rgb(1.0 - R_rgb.x, 1.0 - R_rgb.y, 1.0 - R_rgb.z);
 
         auto lum = [](const Vector3D& c) { return 0.2126 * c.x + 0.7152 * c.y + 0.0722 * c.z; };
-        double pR = std::clamp(lum(R_rgb), 1e-4, 1.0 - 1e-4); // 防止 pdf 过小
+        double pR = std::clamp(lum(R_rgb), 1e-4, 1.0 - 1e-4);
 
-        // 反射 or 折射
         if (coin_flip(pR)) {
-            *wi = Vector3D(-wo.x, -wo.y, wo.z); // 镜面反射
+            *wi = Vector3D(-wo.x, -wo.y, wo.z);
             *pdf = pR;
 
             double cos_wi = std::max(1e-8, std::fabs((*wi).z));
-            return (R_rgb * pR) / cos_wi; // 纯 f，交给 integrator 乘 abs_cos/pdf
+            return (R_rgb * pR) / cos_wi;
         }
         else {
             double eta_i = entering ? n_air : n_film;
@@ -92,13 +89,13 @@ namespace CGL {
 
             double sin2_i = std::max(0.0, 1.0 - cos_i * cos_i);
             double sin2_t = eta * eta * sin2_i;
-            if (sin2_t > 1.0) { // 全反 → 当作反射
+            if (sin2_t > 1.0) {
                 *wi = Vector3D(-wo.x, -wo.y, wo.z);
                 *pdf = 1.0;
-                return R_rgb;    // 与上面的反射分支匹配
+                return R_rgb;
             }
             double cos_t = std::sqrt(std::max(0.0, 1.0 - sin2_t));
-            if (entering) cos_t = -cos_t; // 约定：法线在 +z
+            if (entering) cos_t = -cos_t;
 
             *wi = -wo;
             *pdf = 1.0 - pR;
