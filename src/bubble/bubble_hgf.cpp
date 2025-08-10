@@ -154,9 +154,16 @@ namespace CGL {
 
     }
 
-    struct EdgeLengthCompare {
-        bool operator()(const EdgeIter& e1, const EdgeIter& e2) const {
-            return e1->length() > e2->length(); // min-heap by length
+
+
+    struct EdgeLen {
+        EdgeIter e;
+        double len;
+
+        bool operator<(const EdgeLen& other) const {
+            if (fabs(len - other.len) > 1e-12)
+                return len < other.len;
+            return &(*e) < &(*other.e);
         }
     };
 
@@ -164,92 +171,116 @@ namespace CGL {
         Minv.resize(nVertices());
         Minv.setConstant(1.0);
 
-        
-        std::vector<Edge*> edgesToCollapse;
+        std::set<EdgeLen> edgeSet;
         for (EdgeIter e = edgesBegin(); e != edgesEnd(); ++e) {
-            if (!e->isValid()) continue;  
-
-            HalfedgeIter h = (*e).halfedge();
-            if (h == halfedgesEnd() || !h->isValid()) continue;  
-
-            FaceIter f = (*h).face();
-            if (f == facesEnd() || !f->isValid()) continue;
-
-            if (e->length() < threshold) {
-                edgesToCollapse.push_back(&(*e));
+            if (!e->isValid() || e->isBoundary()) continue;
+            double length = e->length();
+            if (length < threshold) {
+                edgeSet.insert({ e, length });
             }
         }
 
         size_t collapsesThisFrame = 0;
         size_t maxCollapsesPerFrame = 300;
 
-        std::unordered_map<Vertex*, size_t> vertexIndex;
-        size_t idx = 0;
-        for (VertexIter v = verticesBegin(); v != verticesEnd(); ++v, ++idx) {
-            if (!v->isValid()) continue; 
-            vertexIndex[&(*v)] = idx;
-        }
+        while (!edgeSet.empty() && collapsesThisFrame < maxCollapsesPerFrame) {
+            EdgeLen shortest = *edgeSet.begin();
+            edgeSet.erase(edgeSet.begin());
 
-        for (Edge* edgePtr : edgesToCollapse) {
-            if (collapsesThisFrame >= maxCollapsesPerFrame) break;
+            EdgeIter e = shortest.e;
+            if (!e->isValid()) continue;
 
-            EdgeIter e;
-            bool foundValidEdge = false;
-            for (EdgeIter it = edgesBegin(); it != edgesEnd(); ++it) {
-                if (!it->isValid()) continue;  
-
-                if (&(*it) == edgePtr) {
-                    e = it;
-                    foundValidEdge = true;
-                    break;
-                }
-            }
-            if (!foundValidEdge) continue;
-
-            if (!e->isValid()) continue;  
-            HalfedgeIter h = (*e).halfedge();
+            HalfedgeIter h = e->halfedge();
             if (h == halfedgesEnd() || !h->isValid()) continue;
             HalfedgeIter hTwin = h->twin();
             if (hTwin == halfedgesEnd() || !hTwin->isValid()) continue;
 
             VertexIter v0 = h->vertex();
             VertexIter v1 = hTwin->vertex();
-            if (v0 == verticesEnd() || !v0->isValid() ||
-                v1 == verticesEnd() || !v1->isValid()) continue;
+            if (!v0->isValid() || !v1->isValid()) continue;
+            cout << "before for loop:" << "\n";
+            
 
-            size_t i0 = vertexIndex[&(*v0)];
-            size_t i1 = vertexIndex[&(*v1)];
-            if (i0 >= V.rows() || i1 >= V.rows()) continue;
+            std::vector<EdgeIter> affectedEdges;
 
-            double m0 = (Minv(i0) > 1e-12) ? 1.0 / Minv(i0) : 0.0;
-            double m1 = (Minv(i1) > 1e-12) ? 1.0 / Minv(i1) : 0.0;
-            double total_mass = m0 + m1;
-            if (total_mass < 1e-12) continue;
+            HalfedgeIter hv = v0->halfedge();
+            size_t maxSteps = 50; 
+            if (v0 != v1) {
+                do {
+                    if (hv == halfedgesEnd() || !hv->isValid()) break;
+                    EdgeIter ae = hv->edge();
+                    if (ae != edgesEnd() && ae->isValid()) {
+                        affectedEdges.push_back(ae);
+                    }
 
-            if (!e->isValid()) continue;  
+                    if (hv->twin() == halfedgesEnd() || !hv->twin()->isValid()) break;
+                    hv = hv->twin()->next();
+                    maxSteps--;
+                    cout << "push_back v0: max" << maxSteps << "pos" << v0->position << "\n";
+                } while (hv != v0->halfedge() && maxSteps > 0);
+            }
+            if (maxSteps == 0) { break;  }
+            maxSteps = 50;
+            hv = v1->halfedge();
+            do {
+                if (hv == halfedgesEnd() || !hv->isValid()) break;
+                EdgeIter ae = hv->edge();
+                if (ae != edgesEnd() && ae->isValid() && &(*ae) != &(*e)) {
+                    affectedEdges.push_back(ae);
+                }
 
-            Vector3D newPos = 0.5 * (v0->position + v1->position);
+                if (hv->twin() == halfedgesEnd() || !hv->twin()->isValid()) break;
+                hv = hv->twin()->next();
+                maxSteps--;
+                cout << "push_back v2: max" << maxSteps << "pos" << v0->position << "\n";
 
+            } while (hv != v1->halfedge() && maxSteps > 0);
+
+
+            for (auto& ae : affectedEdges) {
+                cout << "erase edges:" << "\n";
+                edgeSet.erase({ ae, ae->length() });
+            }
+
+            // Collapse edge
+            cout << "Collapsing edge:" << "\n";
             VertexIter newVert = collapseEdge(e);
             if (newVert == verticesEnd() || !newVert->isValid()) continue;
 
-            newVert->position = newPos;
+            // Update position & normal
+            newVert->position = 0.5 * (v0->position + v1->position);
+			cout << "new vertex position: " << newVert->position << "\n";
             newVert->computeNormal();
 
-            // update matrices
-            size_t new_idx = nVertices() - 1;
-            if (new_idx >= (size_t)V.rows()) {
-                V.conservativeResize(new_idx + 1, 3);
-                Minv.conservativeResize(new_idx + 1);
-            }
-            V.row(new_idx) = (m0 * V.row(i0) + m1 * V.row(i1)) / total_mass;
-            Minv(new_idx) = 1.0 / total_mass;
+            HalfedgeIter start = newVert->halfedge();
+            if (start != halfedgesEnd() && start->isValid()) {
+                HalfedgeIter hv = start;
+                size_t maxSteps = 50; // safety cap
 
-            vertexIndex[&(*newVert)] = new_idx;
+                do {
+                    if (hv == halfedgesEnd() || !hv->isValid()) break;
+
+                    EdgeIter ae = hv->edge();
+                    if (ae != edgesEnd() && ae->isValid()) {
+                        double len = ae->length();
+                        std::cout << "in do while inserting length:" << len << "\n";
+                        if (len < threshold) {
+                            edgeSet.insert({ ae, len });
+                        }
+                    }
+
+                    if (hv->twin() == halfedgesEnd() || !hv->twin()->isValid()) break;
+                    hv = hv->twin()->next();
+                    maxSteps--;
+
+                } while (hv != start && maxSteps > 0);
+            }
+
             collapsesThisFrame++;
         }
 
-        cout << "New vertex count: " << nVertices() << endl;
+        std::cout << "Collapses this frame: " << collapsesThisFrame << "\n";
+        std::cout << "New vertex count: " << nVertices() << "\n";
     }
 
 
