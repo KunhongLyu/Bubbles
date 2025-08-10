@@ -61,7 +61,7 @@ namespace CGL {
         // TODO (part 1)
         // This should incorporate the bubble surface bsdf.
         // I think maybe choose 50% 50% to reflect or refract.
-        // Maybe the probability isn¡¯t 50% 50%, we¡¯ll have to look.
+        // Maybe the probability isn't 50% 50%, we'll have to look.
         double cos_i = wo.z;
         bool entering = cos_i > 0.0;
         double n_air = 1.0, n_film = refractive_index;
