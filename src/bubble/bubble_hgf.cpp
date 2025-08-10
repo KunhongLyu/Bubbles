@@ -60,7 +60,7 @@ namespace CGL {
 
         // TODO:
         // maybe use tthe isotropic remeshing algorithm?
-        const int outerIterations = 5;
+        const int outerIterations = 2;
         const int smoothingSteps = 10;
         const double maxEdgeRatio = 4.0 / 3.0;
         const double minEdgeRatio = 4.0 / 5.0;
@@ -98,9 +98,8 @@ namespace CGL {
 
 
     void BubbleHGF::splitLongEdges(double threshold) {
-       
+        const size_t current_vertex_count = nVertices();
         std::unordered_map<Vertex*, size_t> vidx;
-        size_t current_vertex_count = nVertices();
         vidx.reserve(current_vertex_count * 2);
         std::cout << "vidx size: edges " << current_vertex_count << std::endl;
 
@@ -108,56 +107,49 @@ namespace CGL {
         for (auto v = verticesBegin(); v != verticesEnd(); ++v, ++idx) {
             vidx[&(*v)] = idx;
         }
-        
-    
+       
+        //store edges to split 
         vector<EdgeIter> edgesToSplit;
-
         for (EdgeIter e = edgesBegin(); e != edgesEnd(); ++e) {
             if (e->length() > threshold) {
                 edgesToSplit.push_back(e);
             }
         }
+
         std::cout << "Found " << edgesToSplit.size() << " edges to split" << std::endl;
-        std::cout << "Before splitting: vertices.size() = " << vertices.size()
+        std::cout << "Before splitting: v.size() = " << vertices.size()
             << ", V.rows() = " << V.rows()
             << ", Minv.size() = " << Minv.size() << std::endl;
 
+        const size_t initial_vertex_count = nVertices();
+        V.conservativeResize(initial_vertex_count + edgesToSplit.size(), 3);
+        Minv.conservativeResize(initial_vertex_count + edgesToSplit.size());
+        
+        int i = 0; 
         for (EdgeIter e : edgesToSplit) {
-            Vertex* raw_v0 = &(*e->halfedge()->vertex());
-            Vertex* raw_v1 = &(*e->halfedge()->twin()->vertex());
-
-            // Verify vertices exist in map
-            if (vidx.count(raw_v0) == 0 || vidx.count(raw_v1) == 0) {
-                throw std::runtime_error("Vertex not found in index map");
-            }
-            size_t i0 = vidx[raw_v0];
-            size_t i1 = vidx[raw_v1];
-            if (Minv.size() != vertices.size()) {
-                std::cout << "Resizing Minv to match vertices\n";
-                Minv.resize(vertices.size());
-                Minv.setConstant(1.0); 
-            }
-
-            const double epsilon = 1e-10;
-            double m0 = 1.0 / std::max(Minv(i0), epsilon);
-
-            double m1 = 1.0 / std::max(Minv(i1), epsilon);
+            Vertex* v0 = &(*e->halfedge()->vertex());
+            Vertex* v1 = &(*e->halfedge()->twin()->vertex());
+         
+            size_t i0 = vidx[v0];
+            size_t i1 = vidx[v1];
+         
+            double m0 = 1.0 / Minv(i0);
+            double m1 = 1.0 / Minv(i1);
 
             VertexIter newVert = splitEdge(e);
-            newVert->position = 0.5 * (raw_v0->position + raw_v1->position);
-            newVert->computeNormal();
+            const size_t new_idx = initial_vertex_count + i;
 
-            size_t new_idx = V.rows();
-            V.conservativeResize(new_idx + 1, 3);
-            Minv.conservativeResize(new_idx + 1);
+            newVert->position = 0.5 * (v0->position + v1->position);
+            newVert->computeNormal();
 
             // interpolate velocity
             V.row(new_idx) = (m0 * V.row(i0) + m1 * V.row(i1)) / (m0 + m1);
             Minv(new_idx) = 1.0 / (m0 + m1);
 
             vidx[&(*newVert)] = new_idx;
+            i++; 
         }
-        std::cout << "After splitting: vertices.size() = " << vertices.size()
+        std::cout << "After splitting: v.size() = " << vertices.size()
             << ", V.rows() = " << V.rows()
             << ", Minv.size() = " << Minv.size() << std::endl;
 
