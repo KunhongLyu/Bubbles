@@ -70,6 +70,16 @@ namespace CGL {
         void correctVolume();
         void regularizeMesh();
 
+
+        //remesh helper 
+        double calculateMeanEdgeLength() const;
+        void splitLongEdges(double threshold); 
+        void collapseShortEdges(double threshold);
+        void flipEdgesForRegularDegree(); 
+        bool shouldFlipEdge(EdgeIter e) const; 
+        void tangentialSmoothing(double weight); 
+
+		void updateMeshBuffers();
         double sinceLastUpdate;
         
 
