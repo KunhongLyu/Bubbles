@@ -214,7 +214,7 @@ namespace CGL {
             }
             else {
                 // TODO: use skybox for background color
-				Li = Vector3D(1.0, 1.0, 1.0);;
+                Li = skybox->sample(new_r.d);
             }
 
             if (use_roulette)
@@ -239,8 +239,9 @@ namespace CGL {
         Intersection isect;
         Vector3D L_out;
 
-        if (!bvh->intersect(r, &isect))
-            return Vector3D(1.0, 1.0, 1.0);
+        if (!bvh->intersect(r, &isect)) {
+            return skybox->sample(r.d);
+        }
 
         if (isect.t == INF_D)
             return debug_shading(r.d);
