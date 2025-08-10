@@ -10,51 +10,96 @@ using std::string;
 
 namespace CGL {
 
-    Skybox::Skybox(string leftFaceFile,
-                   string rightFaceFile,
-                   string topFaceFile,
-                   string bottomFaceFile,
-                   string frontFaceFile,
-                   string backFaceFile) {
-    
-        float s = 1.0f;
-        float cubeBackVerts[] = {
+    SkyboxFaces SkyboxFaces::loadFromFiles(
+        const string &leftFaceFile,
+        const string &rightFaceFile,
+        const string &topFaceFile,
+        const string &bottomFaceFile,
+        const string &frontFaceFile,
+        const string &backFaceFile) {
+        
+        SkyboxFaces faces;
+
+
+        RawFace *facePtrs[] = {
+            &faces.leftFace,
+            &faces.rightFace,
+            &faces.topFace,
+            &faces.bottomFace,
+            &faces.frontFace,
+            &faces.backFace
+        };
+        const string filenames[] = {
+            leftFaceFile,
+            rightFaceFile,
+            topFaceFile,
+            bottomFaceFile,
+            frontFaceFile,
+            backFaceFile
+        };
+
+        for (int i = 0; i < 6; i++) {
+            unsigned error = lodepng::decode(
+                facePtrs[i]->face,
+                facePtrs[i]->width,
+                facePtrs[i]->height,
+                filenames[i]);
+
+            if (error != 0) {
+                std::cout << "error " << error << ": " << lodepng_error_text(error) << std::endl;
+                return {};
+            }
+        }
+
+        return faces;
+    }
+
+    namespace CubeData {
+
+        constexpr float s = 1.0f;
+        constexpr float cubeBackVerts[] = {
             -s,  s,  s,  1.0f, 0.0f,
              s,  s,  s,  0.0f, 0.0f,
              s, -s,  s,  0.0f, 1.0f,
             -s, -s,  s,  1.0f, 1.0f
         };
-        float cubeFrontVerts[] = {
+        constexpr float cubeFrontVerts[] = {
             -s,  s, -s,  0.0f, 0.0f,
             -s, -s, -s,  0.0f, 1.0f,
              s, -s, -s,  1.0f, 1.0f,
              s,  s, -s,  1.0f, 0.0f,
         };
-        float cubeLeftVerts[] = {
+        constexpr float cubeLeftVerts[] = {
             -s,  s, -s,  1.0f, 0.0f,
             -s, -s, -s,  1.0f, 1.0f,
             -s, -s,  s,  0.0f, 1.0f,
             -s,  s,  s,  0.0f, 0.0f,
         };
-        float cubeRightVerts[] = {
+        constexpr float cubeRightVerts[] = {
              s,  s,  s,  1.0f, 0.0f,
              s, -s,  s,  1.0f, 1.0f,
              s, -s, -s,  0.0f, 1.0f,
              s,  s, -s,  0.0f, 0.0f,
         };
-        float cubeBottomVerts[] = {
+        constexpr float cubeBottomVerts[] = {
             -s, -s,  s,  0.0f, 1.0f,
             -s, -s, -s,  0.0f, 0.0f,
              s, -s, -s,  1.0f, 0.0f,
              s, -s,  s,  1.0f, 1.0f,
         };
-        float cubeTopVerts[] = {
+        constexpr float cubeTopVerts[] = {
             -s,  s, -s,  0.0f, 1.0f,
             -s,  s,  s,  0.0f, 0.0f,
              s,  s,  s,  1.0f, 0.0f,
              s,  s, -s,  1.0f, 1.0f
         };
-        uint32_t cubeIndices[] = { 0, 1, 2,   0, 2, 3,};
+        constexpr uint32_t cubeIndices[] = { 0, 1, 2,   0, 2, 3, };
+    }
+
+
+    Skybox::Skybox(const SkyboxFaces &faces) {
+    
+        using namespace CubeData;
 
         vector<ShaderInput> cubeInputFormat;
         cubeInputFormat.push_back({ Type_Float , 3 });
@@ -83,11 +128,8 @@ namespace CGL {
         glGenTextures(1, &texBottom);
 
         GLuint textures[] = { texBack, texFront, texLeft, texRight, texTop, texBottom };
-        string texFile[] = {
-            backFaceFile, frontFaceFile, leftFaceFile, rightFaceFile, topFaceFile, bottomFaceFile
-        };
-        std::vector<unsigned char> *images[] = { &imgBack, &imgFront, &imgLeft, &imgRight, &imgTop, &imgBottom };
-
+        const RawFace *facesArr[] = { &faces.backFace, &faces.frontFace, &faces.leftFace, &faces.rightFace, &faces.topFace, &faces.bottomFace };
+        
         for (int i = 0; i < 6; i++) {
             auto &texID = textures[i];
             glBindTexture(GL_TEXTURE_2D, texID);
@@ -96,16 +138,9 @@ namespace CGL {
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-            string filename = texFile[i];
-            unsigned width, height;
-            unsigned error = lodepng::decode(*images[i], width, height, filename);
+            const RawFace *face = facesArr[i];
 
-            if (error != 0) {
-                std::cout << "error " << error << ": " << lodepng_error_text(error) << std::endl;
-                return;
-            }
-
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, (images[i])->data());
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, face->width, face->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, face->face.data());
 
             glGenerateMipmap(GL_TEXTURE_2D);
         }
@@ -143,5 +178,41 @@ namespace CGL {
 
         glDepthMask(GL_TRUE);
         glDepthFunc(GL_LESS);
+    }
+
+
+
+    PathtracingSkybox::PathtracingSkybox(const SkyboxFaces &faces) : faces(faces) {
+
+    }
+    PathtracingSkybox::~PathtracingSkybox() {
+
+    }
+
+    Vector3D PathtracingSkybox::sample(Vector3D dir) const {
+        float ax = abs(dir.x), ay = abs(dir.y), az = abs(dir.z);
+
+
+        if (ax >= ay && ax >= az) {
+            if (dir.x > 0) {
+                // +X (right)
+            } else {
+                // -X (left)
+            }
+        } else if (ay >= ax && ay >= az) {
+            if (dir.y > 0) {
+                // +Y (top)
+            } else {
+                // -Y (bottom)
+            }
+        } else {
+            if (dir.z > 0) {
+                // +Z (front)
+            } else {
+                // -Z (back)
+            }
+        }
+
+        return out;
     }
 }

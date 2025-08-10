@@ -127,7 +127,7 @@ namespace CGL {
         // change this for different skybox textures
         string skyboxFolder = "galaxy";
 
-        sky = new Skybox(
+        SkyboxFaces faces = SkyboxFaces::loadFromFiles(
             "../../../textures/" + skyboxFolder + "/nx.png",
             "../../../textures/" + skyboxFolder + "/px.png",
             "../../../textures/" + skyboxFolder + "/py.png",
@@ -135,6 +135,8 @@ namespace CGL {
             "../../../textures/" + skyboxFolder + "/pz.png",
             "../../../textures/" + skyboxFolder + "/nz.png"
         );
+
+        sky = new Skybox(faces);
     }
 
     void Application::render() {

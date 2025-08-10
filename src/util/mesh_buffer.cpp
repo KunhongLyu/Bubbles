@@ -27,7 +27,7 @@ namespace CGL {
     }
 
 
-    MeshBuffer::MeshBuffer(const std::vector<ShaderInput> &inputFormat, void *vertexData, size_t vertexCount, void *indexData, InputType indexFormat, size_t indexCount, BufferUsage vertexUsage, BufferUsage indexUsage) :
+    MeshBuffer::MeshBuffer(const std::vector<ShaderInput> &inputFormat, const void *vertexData, size_t vertexCount, const void *indexData, InputType indexFormat, size_t indexCount, BufferUsage vertexUsage, BufferUsage indexUsage) :
         vertexCount(vertexCount), indexCount(indexCount),
         indexFormat(indexFormat),
         vbo(0), vao(0), ebo(0),

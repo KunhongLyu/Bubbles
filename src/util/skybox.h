@@ -7,20 +7,39 @@
 #include "mesh_buffer.h"
 #include "shader.h"
 #include "../pathtracer/bvh.h"
+#include "CGL/CGLMath.h"
 
 using std::string;
 using std::vector;
 
 
 namespace CGL {
+
+    struct RawFace {
+        vector<unsigned char> face;
+        unsigned int width, height;
+    };
+
+    struct SkyboxFaces {
+        RawFace leftFace;
+        RawFace rightFace;
+        RawFace topFace;
+        RawFace bottomFace;
+        RawFace frontFace;
+        RawFace backFace;
+
+        static SkyboxFaces loadFromFiles(
+            const string &leftFaceFile,
+            const string &rightFaceFile,
+            const string &topFaceFile,
+            const string &bottomFaceFile,
+            const string &frontFaceFile,
+            const string &backFaceFile);
+    };
+
     class Skybox {
     public:
-        Skybox(string leftFaceFile, 
-               string rightFaceFile,
-               string topFaceFile,
-               string bottomFaceFile,
-               string frontFaceFile,
-               string backFaceFile);
+        Skybox(const SkyboxFaces &faces);
         ~Skybox();
 
         void setViewMat(const Matrix4x4 &viewMat);
@@ -28,28 +47,7 @@ namespace CGL {
 
         void render();
 
-        MeshPathtracerCapture *getPathtracerCapture() const {
-            return pathtracerCapture;
-        };
-
-
     private:
-
-        class SkyboxCapture : public MeshPathtracerCapture {
-        public:
-            SkyboxCapture(Skybox *par) : parentSkybox(par) {};
-
-        protected:
-            virtual void create_ptr(MeshablePathtracer **) const;
-            virtual void update_cur_ptr(MeshablePathtracer **) const;
-            virtual void release_ptr(MeshablePathtracer *) const;
-
-        private:
-            Skybox *parentSkybox;
-
-        };
-
-        SkyboxCapture *pathtracerCapture;
 
         MeshBuffer *cubeBack, *cubeFront, *cubeLeft, *cubeRight, *cubeTop, *cubeBottom;
 
@@ -61,11 +59,18 @@ namespace CGL {
         GLint projMatLoc;
 
         GLint skyboxTextureLoc;
+    };
 
-        vector<unsigned char> imgBack, imgFront, imgLeft, imgRight, imgTop, imgBottom;
+    class PathtracingSkybox {
+    public:
+        PathtracingSkybox(const SkyboxFaces &faces);
+        ~PathtracingSkybox();
 
+        Vector3D sample(Vector3D dir) const;
 
-        
+    private:
+        SkyboxFaces faces;
+
     };
 }
 
