@@ -213,6 +213,6 @@ namespace CGL {
             }
         }
 
-        return out;
+        return Vector3D();
     }
 }
