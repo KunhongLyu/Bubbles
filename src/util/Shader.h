@@ -29,6 +29,8 @@ namespace CGL {
         void setMat3x3(GLint loc, Matrix3x3 m);
         void setMat4x4(GLint loc, Matrix4x4 m);
 
+        void setTex(GLint loc, GLuint texUnit);
+
         void useProgram() const;
         static void removeProgram();
 

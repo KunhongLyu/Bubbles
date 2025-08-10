@@ -23,6 +23,8 @@
 
 #include "pathtracer/light.h"
 
+#include "util/skybox.h"
+
 
 using namespace std;
 
@@ -65,7 +67,22 @@ namespace CGL {
         Shader *quadShader;
 
         MeshBuffer *cube;
-        Shader *cubeShader;
+        Shader *phongShader;
+
+        GLint lightDirLoc;
+        GLint lightColorLoc;
+        GLint viewPosLoc;
+        GLint ambientColorLoc;
+        GLint diffuseColorLoc;
+        GLint specularColorLoc;
+        GLint shininessLoc;
+
+        GLint modelloc;
+        GLint viewloc;
+        GLint projloc;
+
+        Skybox *sky;
+
 
         BubbleDynamics *bubbleDynamics;
 

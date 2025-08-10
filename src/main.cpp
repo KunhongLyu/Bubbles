@@ -8,6 +8,8 @@
 
 #include "collada/collada.h"
 
+#include "util/skybox.h"
+
 
 using namespace CGL;
 
@@ -85,7 +87,7 @@ int main(int argc, char **argv) {
     // start viewer
     viewer.start();
 
-    app->stop_pathtracer();
+    //app->stop_pathtracer();
 
 
     delete app;

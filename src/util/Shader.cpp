@@ -127,4 +127,9 @@ namespace CGL {
         glUniformMatrix4fv(loc, 1, GL_FALSE, entries);
         glUseProgram(0);
     }
+    void Shader::setTex(GLint loc, GLuint texUnit) {
+        glUseProgram(program);
+        glUniform1i(loc, texUnit);
+        glUseProgram(0);
+    }
 }

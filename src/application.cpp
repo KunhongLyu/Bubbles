@@ -54,70 +54,19 @@ namespace CGL {
         quad = new MeshBuffer(quadInputFormat, vertices, 4, indices, Type_UInt, 6, Usage_StaticDraw, Usage_StaticDraw);
 
 
-        float cubeVert[] = {
-            // Front face (z = -0.5, normal = 0, 0, -1)
-            -0.5f,  0.5f, -0.5f,  0.0f, 0.0f, -1.0f,  // 0
-             0.5f,  0.5f, -0.5f,  0.0f, 0.0f, -1.0f,  // 1
-             0.5f, -0.5f, -0.5f,  0.0f, 0.0f, -1.0f,  // 2
-            -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, -1.0f,  // 3
 
-            // Back face (z = 0.5, normal = 0, 0, 1)
-            -0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,   // 4
-            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,   // 5
-             0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,   // 6
-             0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,   // 7
+        phongShader = new Shader("Shaders/phong.vert", "Shaders/phong.frag");
 
-            // Left face (x = -0.5, normal = -1, 0, 0)
-            -0.5f,  0.5f, -0.5f, -1.0f, 0.0f, 0.0f,   // 8
-            -0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f,   // 9
-            -0.5f, -0.5f,  0.5f, -1.0f, 0.0f, 0.0f,   // 10
-            -0.5f,  0.5f,  0.5f, -1.0f, 0.0f, 0.0f,   // 11
-
-            // Right face (x = 0.5, normal = 1, 0, 0)
-            0.5f,  0.5f,  0.5f,  1.0f, 0.0f, 0.0f,   // 12
-            0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 0.0f,   // 13
-            0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,   // 14
-            0.5f,  0.5f, -0.5f,  1.0f, 0.0f, 0.0f,   // 15
-
-            // Bottom face (y = -0.5, normal = 0, -1, 0)
-            -0.5f, -0.5f,  0.5f,  0.0f, -1.0f, 0.0f,  // 16
-            -0.5f, -0.5f, -0.5f,  0.0f, -1.0f, 0.0f,  // 17
-             0.5f, -0.5f, -0.5f,  0.0f, -1.0f, 0.0f,  // 18
-             0.5f, -0.5f,  0.5f,  0.0f, -1.0f, 0.0f,  // 19
-
-            // Top face (y = 0.5, normal = 0, 1, 0)
-            -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.0f,   // 20
-            -0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 0.0f,   // 21
-             0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 0.0f,   // 22
-             0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.0f    // 23
-        };
-        uint32_t cubeIndices[] = {// Front
-            0, 1, 2,   0, 2, 3,
-            // Back
-            4, 5, 6,   4, 6, 7,
-            // Left
-            8, 9, 10,  8, 10, 11,
-            // Right
-            12, 13, 14, 12, 14, 15,
-            // Bottom
-            16, 17, 18, 16, 18, 19,
-            // Top
-            20, 21, 22, 20, 22, 23 };
-
-        vector<ShaderInput> cubeInputFormat;
-        cubeInputFormat.push_back({ Type_Float , 3 });
-        cubeInputFormat.push_back({ Type_Float , 3 });
-
-        cube = new MeshBuffer(cubeInputFormat, cubeVert, 24, cubeIndices, Type_UInt, 36, Usage_StaticDraw, Usage_StaticDraw);
-        cubeShader = new Shader("Shaders/cube.vert", "Shaders/cube.frag");
-
-        GLint lightDirLoc = cubeShader->uniformLocation("lightDir");
-        GLint lightColorLoc = cubeShader->uniformLocation("lightColor");
-        GLint viewPosLoc = cubeShader->uniformLocation("viewPos");
-        GLint ambientColorLoc = cubeShader->uniformLocation("ambientColor");
-        GLint diffuseColorLoc = cubeShader->uniformLocation("diffuseColor");
-        GLint specularColorLoc = cubeShader->uniformLocation("specularColor");
-        GLint shininessLoc = cubeShader->uniformLocation("shininess");
+        lightDirLoc = phongShader->uniformLocation("lightDir");
+        lightColorLoc = phongShader->uniformLocation("lightColor");
+        viewPosLoc = phongShader->uniformLocation("viewPos");
+        ambientColorLoc = phongShader->uniformLocation("ambientColor");
+        diffuseColorLoc = phongShader->uniformLocation("diffuseColor");
+        specularColorLoc = phongShader->uniformLocation("specularColor");
+        shininessLoc = phongShader->uniformLocation("shininess");
+        modelloc = phongShader->uniformLocation("model");
+        viewloc = phongShader->uniformLocation("view");
+        projloc = phongShader->uniformLocation("projection");
 
         // example scene parameters (replace with your actual values)
         Vector3D light_direction_world = Vector3D(-0.5, -1, -1).unit(); // direction toward light source
@@ -129,13 +78,14 @@ namespace CGL {
         Vector3D camera_pos = Vector3D(0.0, 0.0, 2.0);
 
         // upload them
-        cubeShader->setVec3(lightDirLoc, light_direction_world);    // shader negates it internally
-        cubeShader->setVec3(lightColorLoc, light_color);
-        cubeShader->setVec3(ambientColorLoc, ambient_color);
-        cubeShader->setVec3(diffuseColorLoc, diffuse_color);
-        cubeShader->setVec3(specularColorLoc, specular_color);
-        cubeShader->setVec1(shininessLoc, shininess);
-        cubeShader->setVec3(viewPosLoc, camera_pos);
+        phongShader->setVec3(lightDirLoc, light_direction_world);    // shader negates it internally
+        phongShader->setVec3(lightColorLoc, light_color);
+        phongShader->setVec3(ambientColorLoc, ambient_color);
+        phongShader->setVec3(diffuseColorLoc, diffuse_color);
+        phongShader->setVec3(specularColorLoc, specular_color);
+        phongShader->setVec1(shininessLoc, shininess);
+        phongShader->setVec3(viewPosLoc, camera_pos);
+
 
 
         rotateX = 0;
@@ -159,15 +109,32 @@ namespace CGL {
         camera.configure(hFov, vFov, nClip, fClip, screenW, screenH);
 
         camera.place(
-            Vector3D(0, 0, 0),  // look©\at point
-            PI / 2,           // ¦Õ
-            0.0,              // ¦È
-            5.0,              // r
-            0.1,              // minR (¡Ü 5)
-            100.0             // maxR (¡Ý 5)
+            Vector3D(0, 0, 0),
+            PI / 2,           
+            0.0,              
+            5.0,              
+            0.1,              
+            100.0             
         );
 
         renderWireframe = false;
+
+        // Generated the face maps from
+        // https://www.panoton.de/tools/cubemap-converter/
+        // using panorama/equirectangular projection
+
+
+        // change this for different skybox textures
+        string skyboxFolder = "galaxy";
+
+        sky = new Skybox(
+            "../../../textures/" + skyboxFolder + "/nx.png",
+            "../../../textures/" + skyboxFolder + "/px.png",
+            "../../../textures/" + skyboxFolder + "/py.png",
+            "../../../textures/" + skyboxFolder + "/ny.png",
+            "../../../textures/" + skyboxFolder + "/pz.png",
+            "../../../textures/" + skyboxFolder + "/nz.png"
+        );
     }
 
     void Application::render() {
@@ -188,10 +155,6 @@ namespace CGL {
         glClear(GL_COLOR_BUFFER_BIT);
 
 
-        cubeShader->useProgram();
-        GLint modelloc = cubeShader->uniformLocation("model");
-        GLint viewloc = cubeShader->uniformLocation("view");
-        GLint projloc = cubeShader->uniformLocation("projection");
 
 
         Vector3D eyePos = camera.position();
@@ -214,12 +177,17 @@ namespace CGL {
 
         model = Matrix4x4::identity();
 
-        cubeShader->setMat4x4(viewloc, viewm);
-        cubeShader->setMat4x4(projloc, projm);
-        cubeShader->setMat4x4(modelloc, model);
+
+        sky->setViewMat(viewm);
+        sky->setProjMat(projm);
+        sky->render();
+
+        phongShader->setMat4x4(viewloc, viewm);
+        phongShader->setMat4x4(projloc, projm);
+        phongShader->setMat4x4(modelloc, model);
         glDisable(GL_CULL_FACE);
         glEnable(GL_DEPTH_TEST);
-        cubeShader->useProgram();
+        phongShader->useProgram();
 
         if (bubbleDynamics != nullptr) {
             auto bubbleMeshCapture = bubbleDynamics->getMeshCapture();
@@ -233,8 +201,8 @@ namespace CGL {
                 glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
                 set_const_color();
                 float s = 1.002f;
-                cubeShader->setMat4x4(modelloc, Matrix4x4::scale(s, s, s));
-                cubeShader->useProgram();
+                phongShader->setMat4x4(modelloc, Matrix4x4::scale(s, s, s));
+                phongShader->useProgram();
                 bubbleMesh->draw();
                 glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
             }
@@ -242,7 +210,7 @@ namespace CGL {
             cube->draw();
         }
 
-        cubeShader->removeProgram();
+        phongShader->removeProgram();
 
         draw_hud();
     }
@@ -251,15 +219,6 @@ namespace CGL {
     }
 
     void Application::set_phong_color() {
-
-        GLint lightDirLoc = cubeShader->uniformLocation("lightDir");
-        GLint lightColorLoc = cubeShader->uniformLocation("lightColor");
-        GLint viewPosLoc = cubeShader->uniformLocation("viewPos");
-        GLint ambientColorLoc = cubeShader->uniformLocation("ambientColor");
-        GLint diffuseColorLoc = cubeShader->uniformLocation("diffuseColor");
-        GLint specularColorLoc = cubeShader->uniformLocation("specularColor");
-        GLint shininessLoc = cubeShader->uniformLocation("shininess");
-
         Vector3D light_direction_world = Vector3D(-0.5, -1, -1).unit(); // direction toward light source
         Vector3D light_color = Vector3D(1.0, 1.0, 1.0);
         Vector3D ambient_color = Vector3D(0.1, 0.1, 0.1);
@@ -269,29 +228,24 @@ namespace CGL {
         Vector3D camera_pos = Vector3D(0.0, 0.0, 2.0);
 
         // upload them
-        cubeShader->setVec3(lightDirLoc, light_direction_world);    // shader negates it internally
-        cubeShader->setVec3(lightColorLoc, light_color);
-        cubeShader->setVec3(ambientColorLoc, ambient_color);
-        cubeShader->setVec3(diffuseColorLoc, diffuse_color);
-        cubeShader->setVec3(specularColorLoc, specular_color);
-        cubeShader->setVec1(shininessLoc, shininess);
-        cubeShader->setVec3(viewPosLoc, camera_pos);
+        phongShader->setVec3(lightDirLoc, light_direction_world);    // shader negates it internally
+        phongShader->setVec3(lightColorLoc, light_color);
+        phongShader->setVec3(ambientColorLoc, ambient_color);
+        phongShader->setVec3(diffuseColorLoc, diffuse_color);
+        phongShader->setVec3(specularColorLoc, specular_color);
+        phongShader->setVec1(shininessLoc, shininess);
+        phongShader->setVec3(viewPosLoc, camera_pos);
     }
 
     void Application::set_const_color() {
-        GLint ambientColorLoc = cubeShader->uniformLocation("ambientColor");
-        GLint diffuseColorLoc = cubeShader->uniformLocation("diffuseColor");
-        GLint specularColorLoc = cubeShader->uniformLocation("specularColor");
-        GLint shininessLoc = cubeShader->uniformLocation("shininess");
-
         Vector3D color = Vector3D(1, 0, 0);
         float shininess = 64.0f;
 
         // upload them
-        cubeShader->setVec3(ambientColorLoc, color);
-        cubeShader->setVec3(diffuseColorLoc, color);
-        cubeShader->setVec3(specularColorLoc, color);
-        cubeShader->setVec1(shininessLoc, shininess);
+        phongShader->setVec3(ambientColorLoc, color);
+        phongShader->setVec3(diffuseColorLoc, color);
+        phongShader->setVec3(specularColorLoc, color);
+        phongShader->setVec1(shininessLoc, shininess);
     }
 
 
