@@ -83,6 +83,7 @@ namespace CGL {
     }
 
 
+
     double BubbleHGF::calculateMeanEdgeLength() const {
         double totalLength = 0.0;
         int edgeCount = 0;
@@ -97,6 +98,18 @@ namespace CGL {
 
 
     void BubbleHGF::splitLongEdges(double threshold) {
+       
+        std::unordered_map<Vertex*, size_t> vidx;
+        size_t current_vertex_count = nVertices();
+        vidx.reserve(current_vertex_count * 2);
+        std::cout << "vidx size: edges " << current_vertex_count << std::endl;
+
+        size_t idx = 0;
+        for (auto v = verticesBegin(); v != verticesEnd(); ++v, ++idx) {
+            vidx[&(*v)] = idx;
+        }
+        
+    
         vector<EdgeIter> edgesToSplit;
 
         for (EdgeIter e = edgesBegin(); e != edgesEnd(); ++e) {
@@ -105,15 +118,49 @@ namespace CGL {
             }
         }
         std::cout << "Found " << edgesToSplit.size() << " edges to split" << std::endl;
+        std::cout << "Before splitting: vertices.size() = " << vertices.size()
+            << ", V.rows() = " << V.rows()
+            << ", Minv.size() = " << Minv.size() << std::endl;
 
         for (EdgeIter e : edgesToSplit) {
-            Vector3D midPoint = 0.5 * (e->halfedge()->vertex()->position +
-                e->halfedge()->twin()->vertex()->position);
+            Vertex* raw_v0 = &(*e->halfedge()->vertex());
+            Vertex* raw_v1 = &(*e->halfedge()->twin()->vertex());
+
+            // Verify vertices exist in map
+            if (vidx.count(raw_v0) == 0 || vidx.count(raw_v1) == 0) {
+                throw std::runtime_error("Vertex not found in index map");
+            }
+            size_t i0 = vidx[raw_v0];
+            size_t i1 = vidx[raw_v1];
+            if (Minv.size() != vertices.size()) {
+                std::cout << "Resizing Minv to match vertices\n";
+                Minv.resize(vertices.size());
+                Minv.setConstant(1.0); 
+            }
+
+            const double epsilon = 1e-10;
+            double m0 = 1.0 / std::max(Minv(i0), epsilon);
+
+            double m1 = 1.0 / std::max(Minv(i1), epsilon);
 
             VertexIter newVert = splitEdge(e);
-            newVert->position = midPoint;
+            newVert->position = 0.5 * (raw_v0->position + raw_v1->position);
             newVert->computeNormal();
+
+            size_t new_idx = V.rows();
+            V.conservativeResize(new_idx + 1, 3);
+            Minv.conservativeResize(new_idx + 1);
+
+            // interpolate velocity
+            V.row(new_idx) = (m0 * V.row(i0) + m1 * V.row(i1)) / (m0 + m1);
+            Minv(new_idx) = 1.0 / (m0 + m1);
+
+            vidx[&(*newVert)] = new_idx;
         }
+        std::cout << "After splitting: vertices.size() = " << vertices.size()
+            << ", V.rows() = " << V.rows()
+            << ", Minv.size() = " << Minv.size() << std::endl;
+
     }
 
     void BubbleHGF::collapseShortEdges(double threshold) {
@@ -192,6 +239,7 @@ namespace CGL {
         // update the positions of the vertices based on these
         // matrices
         size_t n = vertices.size();
+		std::cout << "vidx size: remesh" << n << std::endl;
         if (n == 0) return;
 
         auto start = std::chrono::high_resolution_clock::now();
@@ -563,7 +611,6 @@ namespace CGL {
     }
     void BubbleHGF::HGFPathtracerCapture::update_cur_ptr(MeshablePathtracer **ptr) const {
         if (*ptr == nullptr) {
-            release_ptr(*ptr);
             create_ptr(ptr);
             return;
         }
