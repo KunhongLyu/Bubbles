@@ -228,11 +228,12 @@ namespace CGL {
 
             if (!e->isValid()) continue;  
 
+            Vector3D newPos = 0.5 * (v0->position + v1->position);
+
             VertexIter newVert = collapseEdge(e);
             if (newVert == verticesEnd() || !newVert->isValid()) continue;
 
-            // update position and normal
-            newVert->position = 0.5 * (v0->position + v1->position);
+            newVert->position = newPos;
             newVert->computeNormal();
 
             // update matrices

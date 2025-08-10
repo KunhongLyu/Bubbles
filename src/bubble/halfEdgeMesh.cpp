@@ -872,6 +872,9 @@ namespace CGL {
     HalfedgeMesh::HalfedgeMesh(const HalfedgeMesh &mesh) { *this = mesh; }
 
     bool Halfedge::isValid() const {
+#ifdef __NOVALID__
+        return true;
+#endif
         // Basic null checks
         if (_vertex == VertexIter() || _edge == EdgeIter() || _face == FaceIter())
             return false;
