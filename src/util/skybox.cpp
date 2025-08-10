@@ -192,6 +192,10 @@ namespace CGL {
     Vector3D PathtracingSkybox::sample(Vector3D dir) const {
         float ax = abs(dir.x), ay = abs(dir.y), az = abs(dir.z);
 
+        // TODO sample the correct face based on direction vector
+        // dir. The face images are all in this->faces structure.
+        // remember the lodepng library starts the pixel data from
+        // the top left.
 
         if (ax >= ay && ax >= az) {
             if (dir.x > 0) {
