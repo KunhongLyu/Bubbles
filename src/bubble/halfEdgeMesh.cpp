@@ -1,12 +1,18 @@
 #include "halfEdgeMesh.h"
 
+
 namespace CGL {
+    struct Vertex;  // forward declaration
+    struct Face;
+    struct Edge;
 
     bool Halfedge::isBoundary(void)
         // returns true if and only if this halfedge is on the boundary
     {
         return face()->isBoundary();
     }
+
+
 
     bool Edge::isBoundary(void) { return halfedge()->face()->isBoundary(); }
 
@@ -345,40 +351,32 @@ namespace CGL {
     }
 
     VertexIter HalfedgeMesh::collapseEdge(EdgeIter e) {
-        // Get the halfedges of the edge
         HalfedgeIter h = e->halfedge();
         HalfedgeIter h_twin = h->twin();
 
-        // Get the vertices to collapse
         VertexIter v0 = h->vertex();
         VertexIter v1 = h_twin->vertex();
 
-        // Check if collapse would create non-manifold geometry
         if (v0->isBoundary() && v1->isBoundary() && !e->isBoundary()) {
             return verticesEnd(); // Can't collapse this edge
         }
 
-        // Check if either vertex is degree 2 (would create a duplicate face)
         if (v0->degree() <= 2 || v1->degree() <= 2) {
             return verticesEnd();
         }
 
-        // Get surrounding elements
         HalfedgeIter h0_next = h->next();
         HalfedgeIter h0_prev = h0_next->next();
         HalfedgeIter h1_next = h_twin->next();
         HalfedgeIter h1_prev = h1_next->next();
 
-        // Get the faces (may be boundary)
         FaceIter f0 = h->face();
         FaceIter f1 = h_twin->face();
 
-        // Create new vertex at midpoint (or you could choose one of the endpoints)
         VertexIter new_v = newVertex();
         new_v->position = (v0->position + v1->position) / 2.0;
         new_v->isNew = false;
 
-        // Reconnect halfedges to new vertex
         HalfedgeIter h_iter = h_twin;
         do {
             h_iter->vertex() = new_v;
@@ -873,4 +871,28 @@ namespace CGL {
 
     HalfedgeMesh::HalfedgeMesh(const HalfedgeMesh &mesh) { *this = mesh; }
 
+    bool Halfedge::isValid() const {
+        // Basic null checks
+        if (_vertex == VertexIter() || _edge == EdgeIter() || _face == FaceIter())
+            return false;
+        if (_next == HalfedgeIter() || _twin == HalfedgeIter())
+            return false;
+
+        // Vertex must point to a valid halfedge (no recursion)
+        if (_vertex->halfedge() == HalfedgeIter())
+            return false;
+
+        // Edge must point to one of its halfedges
+        Edge* edgePtr = &(*_edge);
+        if (&(*edgePtr->halfedge()) != this &&
+            &(*edgePtr->halfedge()) != &(*_twin))
+            return false;
+
+        // Face must point to one of its halfedges
+        Face* facePtr = &(*_face);
+        if (facePtr->halfedge() == HalfedgeIter())
+            return false;
+
+        return true;
+    }
 }  // namespace CGL

@@ -5,6 +5,9 @@
 #include <unordered_map>
 #include <chrono>
 #include <algorithm>
+#include <queue>
+
+
 
 namespace CGL {
 
@@ -68,14 +71,15 @@ namespace CGL {
 
 
         for (int i = 0; i < outerIterations; i++) {
-            splitLongEdges(meanEdgeLength * maxEdgeRatio);
-            //collapseShortEdges(meanEdgeLength * minEdgeRatio);
+            //splitLongEdges(meanEdgeLength * maxEdgeRatio);
+            collapseShortEdges(meanEdgeLength * minEdgeRatio);
             /*flipEdgesForDegree();
 
             for (int j = 0; j < smoothingSteps; j++) {
                 tangentialSmoothing(0.2); 
-            }
+            }SS
             */
+            cout << "second round " << endl; 
             meanEdgeLength = calculateMeanEdgeLength();
         }
         this->topologyUpdated = true;
@@ -101,7 +105,6 @@ namespace CGL {
         const size_t current_vertex_count = nVertices();
         std::unordered_map<Vertex*, size_t> vidx;
         vidx.reserve(current_vertex_count * 2);
-        std::cout << "vidx size: edges " << current_vertex_count << std::endl;
 
         size_t idx = 0;
         for (auto v = verticesBegin(); v != verticesEnd(); ++v, ++idx) {
@@ -117,10 +120,6 @@ namespace CGL {
         }
 
         std::cout << "Found " << edgesToSplit.size() << " edges to split" << std::endl;
-        std::cout << "Before splitting: v.size() = " << vertices.size()
-            << ", V.rows() = " << V.rows()
-            << ", Minv.size() = " << Minv.size() << std::endl;
-
         const size_t initial_vertex_count = nVertices();
         V.conservativeResize(initial_vertex_count + edgesToSplit.size(), 3);
         Minv.conservativeResize(initial_vertex_count + edgesToSplit.size());
@@ -155,26 +154,104 @@ namespace CGL {
 
     }
 
-    void BubbleHGF::collapseShortEdges(double threshold) {
-        vector<EdgeIter> edgesToCollapse;
+    struct EdgeLengthCompare {
+        bool operator()(const EdgeIter& e1, const EdgeIter& e2) const {
+            return e1->length() > e2->length(); // min-heap by length
+        }
+    };
 
+    void BubbleHGF::collapseShortEdges(double threshold) {
+        Minv.resize(nVertices());
+        Minv.setConstant(1.0);
+
+        
+        std::vector<Edge*> edgesToCollapse;
         for (EdgeIter e = edgesBegin(); e != edgesEnd(); ++e) {
-            if (e->length() < threshold && !e->isBoundary()) {
-                edgesToCollapse.push_back(e);
+            if (!e->isValid()) continue;  
+
+            HalfedgeIter h = (*e).halfedge();
+            if (h == halfedgesEnd() || !h->isValid()) continue;  
+
+            FaceIter f = (*h).face();
+            if (f == facesEnd() || !f->isValid()) continue;
+
+            if (e->length() < threshold) {
+                edgesToCollapse.push_back(&(*e));
             }
         }
-        std::cout << "Found " << edgesToCollapse.size() << " edges to collapse" << std::endl;
 
-        for (EdgeIter e : edgesToCollapse) {
-            Vector3D avgPos = 0.5 * (e->halfedge()->vertex()->position +
-                e->halfedge()->twin()->vertex()->position);
+        size_t collapsesThisFrame = 0;
+        size_t maxCollapsesPerFrame = 300;
 
-            VertexIter newVert = collapseEdge(e); 
-              newVert->position = avgPos;
-              newVert->computeNormal();
+        std::unordered_map<Vertex*, size_t> vertexIndex;
+        size_t idx = 0;
+        for (VertexIter v = verticesBegin(); v != verticesEnd(); ++v, ++idx) {
+            if (!v->isValid()) continue; 
+            vertexIndex[&(*v)] = idx;
+        }
 
+        for (Edge* edgePtr : edgesToCollapse) {
+            if (collapsesThisFrame >= maxCollapsesPerFrame) break;
+
+            EdgeIter e;
+            bool foundValidEdge = false;
+            for (EdgeIter it = edgesBegin(); it != edgesEnd(); ++it) {
+                if (!it->isValid()) continue;  
+
+                if (&(*it) == edgePtr) {
+                    e = it;
+                    foundValidEdge = true;
+                    break;
+                }
             }
+            if (!foundValidEdge) continue;
+
+            if (!e->isValid()) continue;  
+            HalfedgeIter h = (*e).halfedge();
+            if (h == halfedgesEnd() || !h->isValid()) continue;
+            HalfedgeIter hTwin = h->twin();
+            if (hTwin == halfedgesEnd() || !hTwin->isValid()) continue;
+
+            VertexIter v0 = h->vertex();
+            VertexIter v1 = hTwin->vertex();
+            if (v0 == verticesEnd() || !v0->isValid() ||
+                v1 == verticesEnd() || !v1->isValid()) continue;
+
+            size_t i0 = vertexIndex[&(*v0)];
+            size_t i1 = vertexIndex[&(*v1)];
+            if (i0 >= V.rows() || i1 >= V.rows()) continue;
+
+            double m0 = (Minv(i0) > 1e-12) ? 1.0 / Minv(i0) : 0.0;
+            double m1 = (Minv(i1) > 1e-12) ? 1.0 / Minv(i1) : 0.0;
+            double total_mass = m0 + m1;
+            if (total_mass < 1e-12) continue;
+
+            if (!e->isValid()) continue;  
+
+            VertexIter newVert = collapseEdge(e);
+            if (newVert == verticesEnd() || !newVert->isValid()) continue;
+
+            // update position and normal
+            newVert->position = 0.5 * (v0->position + v1->position);
+            newVert->computeNormal();
+
+            // update matrices
+            size_t new_idx = nVertices() - 1;
+            if (new_idx >= (size_t)V.rows()) {
+                V.conservativeResize(new_idx + 1, 3);
+                Minv.conservativeResize(new_idx + 1);
+            }
+            V.row(new_idx) = (m0 * V.row(i0) + m1 * V.row(i1)) / total_mass;
+            Minv(new_idx) = 1.0 / total_mass;
+
+            vertexIndex[&(*newVert)] = new_idx;
+            collapsesThisFrame++;
+        }
+
+        cout << "New vertex count: " << nVertices() << endl;
     }
+
+
 
 
 
