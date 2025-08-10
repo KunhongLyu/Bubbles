@@ -145,6 +145,8 @@
 #include <vector>
 #include <utility>
 #include <iostream>
+#include "halfedgemesh.h"   // or halfedgemesh.h
+
 
 #include "CGL/CGL.h"  // Standard 462 Vectors, etc.
 #include "CGL/CGLMath.h"
@@ -359,6 +361,7 @@ namespace CGL {
             _edge = edge;
             _face = face;
         }
+        bool isValid() const;
 
     protected:
         HalfedgeIter _twin;  ///< halfedge on the "other side" of the edge
@@ -404,7 +407,51 @@ namespace CGL {
 
             return d;
         }
+        bool isValid() const {
+            // Check if face appears deleted (optional)
+            if (isDeleted) return false;
 
+            // Check halfedge iterator is valid
+            if (_halfedge == HalfedgeIter()) return false;
+
+            // Verify the halfedge points back to this face
+            const Face* thisFace = &(*this); 			
+            if (_halfedge->face() == FaceIter()) return false;
+
+            // Check for consistent face cycle
+            HalfedgeIter h = _halfedge;
+            size_t count = 0;
+            const size_t maxCount = 1000; // Safety against infinite loops
+
+            do {
+                // Check basic halfedge validity
+                if (!h->isValid()) return false;
+
+                // Verify we're the face of this halfedge
+                const Face* thisFace = &(*this);
+                if (_halfedge->face() == FaceIter()) return false;
+
+
+                // Check next pointer validity
+                HalfedgeIter next = h->next();
+                if (next == HalfedgeIter()) return false;
+
+                // Check we're progressing around the face
+                if (next->vertex() == h->vertex()) return false;
+
+                // Move to next halfedge
+                h = next;
+                count++;
+            } while (h != _halfedge && count < maxCount);
+
+            // Check we completed the cycle
+            if (h != _halfedge) return false;
+
+            // Check for degenerate faces (less than 3 edges)
+            if (count < 3) return false;
+
+            return true;
+        }
         /**
          * check if this face represents a boundary loop
          * \returns true if and only if this face represents a boundary loop, false
@@ -418,11 +465,13 @@ namespace CGL {
          */
         Vector3D normal(void) const;
 
+
         Matrix4x4 quadric;
 
     protected:
         HalfedgeIter _halfedge;  ///< one of the halfedges of this face
-        bool _isBoundary;        ///< boundary flag
+        bool _isBoundary;  
+        bool isDeleted = false;///< boundary flag
     };
 
     /**
@@ -513,6 +562,36 @@ namespace CGL {
             normal.normalize();
         }
 
+
+        bool isValid() const {
+            // Check if vertex appears deleted (optional)
+            if (isDeleted) return false;
+
+            // Check halfedge iterator is valid
+            if (_halfedge == HalfedgeIter()) return false;
+
+            // Verify the halfedge points back to this vertex
+            if (&(*_halfedge->vertex()) != &(*this)) return false;
+
+            // Check for consistent one-ring neighborhood
+            HalfedgeIter h = _halfedge;
+            do {
+                // Check basic halfedge validity
+                if (!h->isValid()) return false;
+
+                // Verify we're a vertex of this halfedge
+                if (&(*(h->vertex())) != &(*this)) return false;
+
+                // Check twin connectivity
+                HalfedgeIter twin = h->twin();
+                if (!twin->isValid()) return false;
+
+                // Move to next halfedge around vertex
+                h = twin->next();
+            } while (h != _halfedge);
+
+            return true;
+        }
         /**
          * Vertex normal
          */
@@ -572,6 +651,7 @@ namespace CGL {
         /**
          * one of the halfedges "rooted" or "based" at this vertex
          */
+        bool isDeleted = false;
         HalfedgeIter _halfedge;
 
     };
@@ -597,6 +677,39 @@ namespace CGL {
             return (p1 - p0).norm();
         }
 
+        bool isValid() const {
+            try {
+                // Basic iterator validity
+                if (_halfedge == HalfedgeIter()) return false;
+
+                // Check twin exists and points back to us
+                HalfedgeIter twin = _halfedge->twin();
+                if (twin == HalfedgeIter()) return false;
+                if (twin->twin() != _halfedge) return false;
+
+                // Check vertices
+                VertexIter v0 = _halfedge->vertex();
+                VertexIter v1 = twin->vertex();
+                if (!v0->isValid() || !v1->isValid()) return false;
+                if (v0 == v1) return false;  // No degenerate edges
+
+                // Check faces (if not boundary)
+                if (!_halfedge->isBoundary()) {
+                    if (!_halfedge->face()->isValid()) return false;
+                    if (_halfedge->next()->next()->next() != _halfedge) return false;
+                }
+                if (!twin->isBoundary()) {
+                    if (!twin->face()->isValid()) return false;
+                    if (twin->next()->next()->next() != twin) return false;
+                }
+
+                return true;
+            }
+            catch (...) {
+                // If any dereferencing throws, the edge is invalid
+                return false;
+            }
+        }
         /**
          * For Loop subdivision, this will be the position for the edge midpoint
          */
@@ -617,7 +730,7 @@ namespace CGL {
          * One of the two halfedges associated with this edge
          */
         HalfedgeIter _halfedge;
-
+        bool isDeleted = false;
     };
 
     class HalfedgeMesh {
@@ -794,6 +907,8 @@ namespace CGL {
     inline Face *HalfedgeElement::getFace(void) {
         return dynamic_cast<Face *>(this);
     }
+
+
 
 }  // End of CMU 462 namespace.
 
