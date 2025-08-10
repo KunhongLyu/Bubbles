@@ -1,4 +1,4 @@
-#include "pathtracer.h"
+﻿#include "pathtracer.h"
 
 
 
@@ -49,8 +49,10 @@ namespace CGL {
 
         // make a coordinate system for a hit point
         // with N aligned with the Z direction.
+		Vector3D n = isect.n;
+		if (dot(n,r.d) >  0) n = -n;
         Matrix3x3 o2w;
-        make_coord_space(o2w, isect.n);
+        make_coord_space(o2w, n);
         Matrix3x3 w2o = o2w.T();
 
         // w_out points towards the source of the ray (e.g.,
@@ -89,8 +91,10 @@ namespace CGL {
 
         // make a coordinate system for a hit point
         // with N aligned with the Z direction.
+        Vector3D n = isect.n;
+        if (dot(n, r.d) > 0) n = -n;
         Matrix3x3 o2w;
-        make_coord_space(o2w, isect.n);
+        make_coord_space(o2w, n);
         Matrix3x3 w2o = o2w.T();
 
         // w_out points towards the source of the ray (e.g.,
@@ -133,14 +137,19 @@ namespace CGL {
 
         //if (direct_hemisphere_sample)
         //    return estimate_direct_lighting_hemisphere(r, isect);
+        if (isect.bsdf->is_delta()) {
+            return Vector3D();
+        }
         return estimate_direct_lighting_importance(r, isect);
     }
 
     template<bool use_roulette>
     Vector3D PathTracer::at_least_one_bounce_radiance_internal(const Ray &r,
         const Intersection &isect) {
+        Vector3D n = isect.n;
+        if (dot(n, r.d) > 0) n = -n;
         Matrix3x3 o2w;
-        make_coord_space(o2w, isect.n);
+        make_coord_space(o2w, n);
         Matrix3x3 w2o = o2w.T();
 
         Vector3D hit_p = r.o + r.d * isect.t;
@@ -182,18 +191,29 @@ namespace CGL {
             Vector3D bsdf_val = isect.bsdf->sample_f(w_out, &wi_local, &pdf);
 
             if (pdf <= 0.0) {
-                return L_out;
+                continue;
             }
 
             Vector3D wi_world = o2w * wi_local;
 
-            Ray new_r(hit_p, wi_world.unit());
+            bool transmitted = (wi_local.z * w_out.z < 0.0);
+            Vector3D n = isect.n;
+            if (dot(n, r.d) > 0) n = -n;
+            Vector3D offset_dir = transmitted ? (-n) : (n);
+
+            Ray new_r(hit_p + offset_dir * 1e-4, wi_world.unit());
             new_r.min_t = EPS_F;
             new_r.depth = r.depth - 1;
             Intersection new_isect;
             Vector3D Li;
             if (bvh->intersect(new_r, &new_isect)) {
-                Li = at_least_one_bounce_radiance_internal<use_roulette>(new_r, new_isect);
+                Li = new_isect.bsdf->get_emission();
+                if (new_r.depth > 0) {
+                    Li += at_least_one_bounce_radiance_internal<use_roulette>(new_r, new_isect);
+                }
+            }
+            else {
+				Li = Vector3D(1.0, 1.0, 1.0);;
             }
 
             if (use_roulette)
@@ -219,7 +239,7 @@ namespace CGL {
         Vector3D L_out;
 
         if (!bvh->intersect(r, &isect))
-            return L_out;
+            return Vector3D(1.0, 1.0, 1.0);
 
         if (isect.t == INF_D)
             return debug_shading(r.d);
