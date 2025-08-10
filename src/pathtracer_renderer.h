@@ -21,6 +21,7 @@
 
 
 #include "pathtracer/pathtracer.h"
+#include "../util/skybox.h"
 
 using std::vector;
 
@@ -106,6 +107,8 @@ namespace CGL {
          * \param height height of the frame
          */
         void set_frame_size(size_t width, size_t height);
+
+        void set_skybox(PathtracingSkybox *newSkybox);
 
         /**
          * Update result on screen.

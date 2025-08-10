@@ -213,6 +213,7 @@ namespace CGL {
                 }
             }
             else {
+                // TODO: use skybox for background color
 				Li = Vector3D(1.0, 1.0, 1.0);;
             }
 
