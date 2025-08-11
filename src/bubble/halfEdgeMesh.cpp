@@ -414,6 +414,38 @@ namespace CGL {
     }
 
 
+    double HalfedgeMesh::vertexWeight(VertexIter v) const
+        // This method returns the weight of the vertex, which is defined as the sum of the
+        // cotangent weights of all incident faces.  The cotangent weight is defined as
+        // the cotangent of the angle opposite to the edge connecting this vertex to its
+        // neighbor.
+    {
+        HalfedgeIter start = v->halfedge();
+        HalfedgeIter h = start;
+        double total = 0.0;
+        do
+        {
+            FaceIter f = h->face();
+            HalfedgeIter h0 = f->halfedge();
+            HalfedgeIter h1 = h0->next();
+            HalfedgeIter h2 = h1->next();
+
+            const Vector3D p0 = h0->vertex()->position;
+            const Vector3D p1 = h1->vertex()->position;
+            const Vector3D p2 = h2->vertex()->position;
+
+            // need to divide by 2
+            const double area = cross(p1 - p0, p2 - p0).norm();
+
+            // need to divide by 3
+            const double share = area;
+            total += share;
+            h = h->twin()->next();
+        } while (h != start);
+        // hence divide by 6
+        return total / 6;
+    }
+
     void HalfedgeMesh::build(const vector<vector<Index> > &polygons,
         const vector<Vector3D> &vertexPositions,
         const vector<Vector2D> &texcoords)

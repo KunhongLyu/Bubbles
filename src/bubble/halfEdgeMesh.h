@@ -895,6 +895,8 @@ namespace CGL {
          */
         VertexIter collapseEdge(EdgeIter e);
 
+        double vertexWeight(VertexIter v) const;
+
     protected:
 
         /*
