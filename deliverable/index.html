@@ -35,7 +35,7 @@
 
         <h2>Bubble BSDF</h2>
         <p class="muted">
-            In rendering the bubbles for this project, we extended the HW3 code to incorporate physically accurate thin-film transmission and reflection. Our first step was to implement a helper function to compute the intensities of light that are reflected and refracted by the bubble’s surface. We specified the film’s refractive index 𝑛<sub>𝑓</sub>, its thickness 𝑑, and the refractive index of air 𝑛<sub>0</sub>. Using these parameters, along with the light’s wavelength λ and incident angle 𝜃<sub>0</sub>, we first applied Snell’s law to calculate the film angle 𝜃<sub>𝑓</sub>.
+            In rendering the bubbles for this project, we extended the HW3 code to incorporate physically accurate thin-film transmission and reflection. Our first step was to implement a helper function <code>thin_film_RT</code> to compute the intensities of light that are reflected and refracted by the bubble’s surface. We specified the film’s refractive index 𝑛<sub>𝑓</sub>, its thickness 𝑑, and the refractive index of air 𝑛<sub>0</sub>. Using these parameters, along with the light’s wavelength λ and incident angle 𝜃<sub>0</sub>, we first applied Snell’s law to calculate the film angle 𝜃<sub>𝑓</sub>.
         </p>
         <div class="eq">
             n<sub>0</sub> · sin&nbsp;θ<sub>0</sub> = n<sub>f</sub> · sin&nbsp;θ<sub>f</sub><br>
@@ -73,7 +73,7 @@
             R = ½ ( R<sup>s</sup> + R<sup>p</sup> ), &nbsp;&nbsp;
             T = ½ ( T<sup>s</sup> + T<sup>p</sup> ).
         </div>
-        <p>From this we have a helper can return the intensity ratio of the reflected light and the transmiited light compared to the incident light.</p>
+        <p>After this the <code>thin_film_RT</code> can return the intensity ratio of the reflected light and the transmiited light compared to the incident light.</p>
 
         <section class="card">
             <h3>Delta BSDF Sampling</h3>
@@ -89,15 +89,35 @@
             <table style="width: 100%; text-align: center; border-collapse: collapse;">
                 <tr>
                     <td style="text-align: center;">
-                        <img src="rendersample0_2048_64.png" width="300px" />
+                        <img src="renderwhite1.png" width="300px" />
                         <figcaption>Pathtrace Sample 1</figcaption>
                     </td>
                     <td style="text-align: center;">
-                        <img src="rendersample1_2048_64.png" width="300px" />
+                        <img src="renderwhite2.png" width="300px" />
                         <figcaption>Pathtrace Sample 2</figcaption>
                     </td>
             </table>
         </div>
+
+        <h2> Skybox </h2>
+        <p>To enhance visual richness and avoid a monotonous background, we implemented a skybox so that bubbles could reflect and refract more varied and realistic colors instead of appearing in a blank scene. We loaded six images, each mapped to one face of the cube, forming a complete surrounding environment. In the view matrix, we set <code>v(0,3) = v(1,3) = v(2,3) = 0</code>to remove translation while preserving rotation, ensuring that the cube remains stationary relative to the camera and appears infinitely distant.</p>
+        <p>For path tracing, we created a <code>PathtracingSkybox::sample</code> method that takes a normalized direction vector as input, determines which cube face this direction intersects, converts it to 2D texture coordinates, and returns the corresponding pixel color from that face. This method enabling the path tracer to return accurate background colors when rays miss all geometry.</p>
+
+        <div style="display: flex; flex-direction: column; align-items: center;">
+
+            <table style="width: 100%; text-align: center; border-collapse: collapse;">
+                <tr>
+                    <td style="text-align: center;">
+                        <img src="rendersample0_2048_64.png" width="300px" />
+                        <figcaption>With Skybox Sample 1</figcaption>
+                    </td>
+                    <td style="text-align: center;">
+                        <img src="rendersample1_2048_64.png" width="300px" />
+                        <figcaption>With Skybox Sample 2</figcaption>
+                    </td>
+            </table>
+        </div>
+    </div>
 </body>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
 <script>
