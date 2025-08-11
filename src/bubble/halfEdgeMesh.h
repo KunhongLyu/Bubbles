@@ -603,6 +603,7 @@ namespace CGL {
         /**
          * Vertex normal
          */
+
         Vector3D normal;
 
         // Complex texcoord;  ///< vertex texture coordinate
