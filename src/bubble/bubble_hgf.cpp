@@ -74,18 +74,53 @@ namespace CGL {
         for (int i = 0; i < outerIterations; i++) {
             //splitLongEdges(meanEdgeLength * maxEdgeRatio);
             collapseShortEdges(meanEdgeLength * minEdgeRatio);
-            /*flipEdgesForDegree();
+            //flipEdgesForDegree();
 
             for (int j = 0; j < smoothingSteps; j++) {
-                tangentialSmoothing(0.2); 
-            }SS
-            */
-            cout << "second round " << endl; 
+               // tangentialSmoothing(0.2); 
+            }
+            
+            cout << "next round of outerIteration" << endl; 
             meanEdgeLength = calculateMeanEdgeLength();
         }
         this->topologyUpdated = true;
    
     }
+
+
+
+
+    void BubbleHGF::computeCentroids() {
+        for (VertexIter v = verticesBegin(); v != verticesEnd(); v++) {
+            v->computeCentroid();
+            v->newPosition = v->centroid;
+            
+        }
+    }
+
+    void BubbleHGF::tangentialSmoothing(double weight) {
+
+        computeCentroids();
+
+        for (VertexIter v = verticesBegin(); v != verticesEnd(); v++) {
+            /*if (v->isBoundary()) {
+                continue; 
+            }*/
+
+            double adaptiveWeight = weight * (6.0 / v->degree());
+            adaptiveWeight = clamp(adaptiveWeight, 0.01, 0.5);
+
+            Vector3D update = v->newPosition - v->position;
+            v->computeNormal();
+            Vector3D normal = v->normal; 
+            double normalComponent = dot(update, normal);
+            Vector3D tangentialUpdate = update - normal * normalComponent;
+
+            v->position += tangentialUpdate * adaptiveWeight;
+        }
+    }
+
+
 
 
 
