@@ -146,7 +146,7 @@ namespace CGL {
         for (auto v = verticesBegin(); v != verticesEnd(); ++v, ++idx) {
             vidx[&(*v)] = idx;
         }
-
+       
         //store edges to split 
         vector<EdgeIter> edgesToSplit;
         for (EdgeIter e = edgesBegin(); e != edgesEnd(); ++e) {
@@ -204,12 +204,30 @@ namespace CGL {
             return &(*e) < &(*other.e);
         }
     };
+    struct VertexIterHash {
+        size_t operator()(const VertexIter &it) const noexcept {
+            return std::hash<const Vertex *>()(&*it);
+        }
+    };
+
+    struct VertexIterEq {
+        bool operator()(const VertexIter &a, const VertexIter &b) const noexcept {
+            return &*a == &*b;
+        }
+    };
 
 //#define __DEBUG_OUTPUT__
 
     void BubbleHGF::collapseShortEdges(double threshold) {
         Minv.resize(nVertices());
         Minv.setConstant(1.0);
+
+        std::unordered_map<VertexIter, Vector3D, VertexIterHash, VertexIterEq> vertexVelocity;
+
+        int idx = 0;
+        for (auto v = vertices.begin(); v != vertices.end(); ++v, ++idx) {
+            vertexVelocity[v] = Vector3D(V(idx, 0), V(idx, 1), V(idx, 2));
+        }
 
 
         std::set<EdgeLen> edgeSet;
@@ -257,15 +275,25 @@ namespace CGL {
                     edgeSet.erase({ ae, ae->length() });
                 }
             }
+
+            Vector3D newPos = 0.5 * (v0->position + v1->position);
+            Vector3D v0Vel = vertexVelocity[v0];
+            Vector3D v1Vel = vertexVelocity[v1];
+
+            double v0mass = vertexWeight(v0);
+            double v1mass = vertexWeight(v1);
             // Collapse edge
 #ifdef __DEBUG_OUTPUT__
             cout << "Collapsing edge:" << "\n";
 #endif
-            Vector3D newPos = 0.5 * (v0->position + v1->position);
             VertexIter newVert = collapseEdge(e);
 
             // Update position & normal
             newVert->position = newPos;
+            // Interpolate velocity
+            Vector3D newVel = (v0mass * v0Vel + v1mass * v1Vel) / (v0mass + v1mass);
+            vertexVelocity[newVert] = newVel;
+
 #ifdef __DEBUG_OUTPUT__
             cout << "new vertex position: " << newVert->position << "\n";
 #endif
@@ -296,6 +324,16 @@ namespace CGL {
 
         std::cout << "Collapses this frame: " << collapsesThisFrame << "\n";
         std::cout << "New vertex count: " << nVertices() << "\n";
+
+        V = Eigen::MatrixXd::Zero(nVertices(), 3);
+        idx = 0;
+        for (auto &v = vertices.begin(); v != vertices.end(); ++v, ++idx) {
+            Vector3D vel = vertexVelocity[v];
+            V(idx, 0) = vel.x;
+            V(idx, 1) = vel.y;
+            V(idx, 2) = vel.z;
+            // Update Minv
+        }
     }
 
     bool BubbleHGF::collectIncidentEdges(VertexIter v, EdgeIter collapsingEdge,
