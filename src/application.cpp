@@ -7,6 +7,7 @@ namespace CGL {
 
     Application::Application() {
         bubbleDynamics = nullptr;
+        pathtracingSkybox = nullptr;
     }
 
     Application::~Application() {
@@ -17,6 +18,10 @@ namespace CGL {
         if (quad) {
             delete quad;
             quad = nullptr;
+        }
+        if (pathtracingSkybox) {
+            delete pathtracingSkybox;
+            pathtracingSkybox = nullptr;
         }
     }
 
@@ -125,7 +130,7 @@ namespace CGL {
 
 
         // change this for different skybox textures
-        string skyboxFolder = "galaxy";
+        string skyboxFolder = "pinksky";
 
         SkyboxFaces faces = SkyboxFaces::loadFromFiles(
             "../../../textures/" + skyboxFolder + "/nx.png",
@@ -137,6 +142,8 @@ namespace CGL {
         );
 
         sky = new Skybox(faces);
+
+        pathtracingSkybox = new PathtracingSkybox(faces);
     }
 
     void Application::render() {
@@ -263,6 +270,7 @@ namespace CGL {
         pt->set_frame_size(screenW, screenH);
         pt->set_scene(&scene);
         pt->set_camera(&camera);
+        pt->set_skybox(pathtracingSkybox);
         pt->start_raytracing();
     }
     void Application::stop_pathtracer() {

@@ -192,26 +192,60 @@ namespace CGL {
     Vector3D PathtracingSkybox::sample(Vector3D dir) const {
         float ax = abs(dir.x), ay = abs(dir.y), az = abs(dir.z);
 
+        // TODO sample the correct face based on direction vector
+        // dir. The face images are all in this->faces structure.
+        // remember the lodepng library starts the pixel data from
+        // the top left.
+
+        double u, v;
+        const RawFace *hitFace;
 
         if (ax >= ay && ax >= az) {
             if (dir.x > 0) {
                 // +X (right)
+                u = (-dir.y / ax + 1) / 2;
+                v = ( dir.z / ax + 1) / 2;
+                hitFace = &faces.rightFace;
             } else {
                 // -X (left)
+                u = (-dir.y / ax + 1) / 2;
+                v = (-dir.z / ax + 1) / 2;
+                hitFace = &faces.leftFace;
             }
         } else if (ay >= ax && ay >= az) {
             if (dir.y > 0) {
                 // +Y (top)
+                u = (-dir.z / ay + 1) / 2;
+                v = ( dir.x / ay + 1) / 2;
+                hitFace = &faces.topFace;
             } else {
                 // -Y (bottom)
+                u = ( dir.z / ay + 1) / 2;
+                v = ( dir.x / ay + 1) / 2;
+                hitFace = &faces.bottomFace;
             }
         } else {
             if (dir.z > 0) {
-                // +Z (front)
+                // +Z (back)
+                u = (-dir.y / az + 1) / 2;
+                v = (-dir.x / az + 1) / 2;
+                hitFace = &faces.backFace;
             } else {
-                // -Z (back)
+                // -Z (front)
+                u = (-dir.y / az + 1) / 2;
+                v = ( dir.x / az + 1) / 2;
+                hitFace = &faces.frontFace;
             }
         }
+
+        const unsigned char *pixelLocation = &hitFace->face[(static_cast<size_t>(u * hitFace->width) * hitFace->height +
+            static_cast<size_t>(v * hitFace->height)) * 4];
+
+        return Vector3D(pixelLocation[0] / 255.0,
+            pixelLocation[1] / 255.0,
+            pixelLocation[2] / 255.0
+        );
+
 
         return Vector3D();
     }

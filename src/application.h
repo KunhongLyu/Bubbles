@@ -125,6 +125,8 @@ namespace CGL {
         Camera camera;
 
         SceneLight *global_light;
+
+        PathtracingSkybox *pathtracingSkybox;
         
 
         void render_phong();

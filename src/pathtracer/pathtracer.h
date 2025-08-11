@@ -10,6 +10,7 @@
 #include "light.h"
 
 #include "../util/image.h"
+#include "../util/skybox.h"
 #include "camera.h"
 
 
@@ -98,6 +99,7 @@ namespace CGL {
         Sampler3D *hemisphereSampler;  ///< samples unit hemisphere
         HDRImageBuffer sampleBuffer;   ///< sample buffer
         Timer timer;                   ///< performance test timer
+        PathtracingSkybox *skybox;
 
         std::vector<int> sampleCountBuffer;   ///< sample count buffer
 

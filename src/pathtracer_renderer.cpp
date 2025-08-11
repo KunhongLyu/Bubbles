@@ -171,6 +171,11 @@ namespace CGL {
         }
     }
 
+
+    void PathtracerRenderer::set_skybox(PathtracingSkybox *newSkybox) {
+        pt->skybox = newSkybox;
+    }
+
     bool PathtracerRenderer::has_valid_configuration() {
         return scene && camera;
     }
