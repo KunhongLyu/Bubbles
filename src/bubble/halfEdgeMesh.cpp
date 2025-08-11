@@ -351,19 +351,33 @@ namespace CGL {
     }
 
     VertexIter HalfedgeMesh::collapseEdge(EdgeIter e) {
+        if (!e->isValid()) return verticesEnd();
         HalfedgeIter h = e->halfedge();
         HalfedgeIter h_twin = h->twin();
 
+        if (!h->isValid() || !h_twin->isValid()) return verticesEnd();
         VertexIter v0 = h->vertex();
         VertexIter v1 = h_twin->vertex();
 
-        if (v0->isBoundary() && v1->isBoundary() && !e->isBoundary()) {
-            return verticesEnd(); // Can't collapse this edge
-        }
+        if (!v0->isValid() || !v1->isValid()) return verticesEnd();
 
-        if (v0->degree() <= 2 || v1->degree() <= 2) {
-            return verticesEnd();
-        }
+        if (v0->isBoundary() != v1->isBoundary()) return verticesEnd();
+
+        VertexIter new_v = newVertex();
+        new_v->position = (v0->position + v1->position) / 2.0;
+        new_v->isNew = false;
+
+
+        HalfedgeIter h_iter = h_twin;
+        size_t safety = 0;
+        do {
+            if (!h_iter->isValid() || safety++ > 1000) {
+                deleteVertex(new_v);
+                return verticesEnd(); // Safety break
+            }
+            h_iter->vertex() = new_v;
+            h_iter = h_iter->twin()->next();
+        } while (h_iter != h_twin);
 
         HalfedgeIter h0_next = h->next();
         HalfedgeIter h0_prev = h0_next->next();
@@ -373,12 +387,10 @@ namespace CGL {
         FaceIter f0 = h->face();
         FaceIter f1 = h_twin->face();
 
-        VertexIter new_v = newVertex();
-        new_v->position = (v0->position + v1->position) / 2.0;
-        new_v->isNew = false;
-
-        HalfedgeIter h_iter = h_twin;
+  
+        h_iter = h_twin;
         do {
+            cout << "enter do while in collpase" << endl; 
             h_iter->vertex() = new_v;
             h_iter = h_iter->twin()->next();
         } while (h_iter != h_twin);
@@ -411,23 +423,42 @@ namespace CGL {
 
         // Set new vertex's halfedge to one pointing away from it
         new_v->halfedge() = h0_next->twin()->next();
+        std::cout << "Deleting Halfedge " << &(*h)
+            << " edge=" << (h->edge()->isValid() ? &(*h->edge()) : 0)
+            << " vertex=" << (h->vertex()->isValid() ? &(*h->vertex()) : 0)
+            << "\n";
 
-        // Delete elements being collapsed
-        deleteEdge(e);
-        deleteEdge(h1_p_edge);
-        deleteEdge(h0_p_edge); 
-		deleteHalfedge(h);
-		deleteHalfedge(h_twin);
-		deleteHalfedge(h0_next);
-		deleteHalfedge(h0_prev);
-		deleteHalfedge(h1_next);
-		deleteHalfedge(h1_prev);
+        // First delete halfedges
+        deleteHalfedge(h);
+        deleteHalfedge(h_twin);
+        deleteHalfedge(h0_next);
+        deleteHalfedge(h0_prev);
+        deleteHalfedge(h1_next);
+        deleteHalfedge(h1_prev);
+
+        // Then delete edges (carefully validate first)
+        if (h0_p_edge->isValid()) deleteEdge(h0_p_edge);
+        std::cout << "Deleting Edge " << &(*h0_p_edge) << "valid: " << h0_p_edge->isValid() << "\n";
+
+        if (h1_p_edge->isValid()) {
+            std::cout << "Deleting Edge " << &(*h1_p_edge) << " valid: " << h1_p_edge->isValid() << "\n";
+            deleteEdge(h1_p_edge);
+        }
+
+        if (e->isValid()) {
+            std::cout << "Deleting Edge " << &(*e) << " valid: " << e->isValid() << "\n";
+            deleteEdge(e);
+        }
+
+
+
 
 		deleteVertex(v0);
 		deleteVertex(v1);
 
         if (!f0->isBoundary()) deleteFace(f0);
         if (!f1->isBoundary()) deleteFace(f1);
+        cout << "all deleted" << endl;
 
         return new_v;
     }

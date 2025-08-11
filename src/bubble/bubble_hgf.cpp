@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <queue>
 
+#include <unordered_set>
 
 
 namespace CGL {
@@ -202,85 +203,116 @@ namespace CGL {
             
 
             std::vector<EdgeIter> affectedEdges;
+            std::vector<EdgeIter> tempEdgesv0;
+            std::vector<EdgeIter> tempEdgesv1;
 
-            HalfedgeIter hv = v0->halfedge();
-            size_t maxSteps = 50; 
-            if (v0 != v1) {
-                do {
-                    if (hv == halfedgesEnd() || !hv->isValid()) break;
-                    EdgeIter ae = hv->edge();
-                    if (ae != edgesEnd() && ae->isValid()) {
-                        affectedEdges.push_back(ae);
-                    }
+            bool v0insert = collectIncidentEdges(v0, e, tempEdgesv0);
+			bool v1insert = collectIncidentEdges(v1, e, tempEdgesv1);
+            std::cout << std::boolalpha << "v0insert" << v0insert << "v1insert" << v1insert << "\n";
+            if (v0insert && v1insert) {
+                affectedEdges.insert(affectedEdges.end(), tempEdgesv0.begin(), tempEdgesv0.end());
+                affectedEdges.insert(affectedEdges.end(), tempEdgesv1.begin(), tempEdgesv1.end());
 
-                    if (hv->twin() == halfedgesEnd() || !hv->twin()->isValid()) break;
-                    hv = hv->twin()->next();
-                    maxSteps--;
-                    cout << "push_back v0: max" << maxSteps << "pos" << v0->position << "\n";
-                } while (hv != v0->halfedge() && maxSteps > 0);
-            }
-            if (maxSteps == 0) { break;  }
-            maxSteps = 50;
-            hv = v1->halfedge();
-            do {
-                if (hv == halfedgesEnd() || !hv->isValid()) break;
-                EdgeIter ae = hv->edge();
-                if (ae != edgesEnd() && ae->isValid() && &(*ae) != &(*e)) {
-                    affectedEdges.push_back(ae);
+                for (auto& ae : affectedEdges) {
+                    cout << "erase edges:" << "\n";
+                    edgeSet.erase({ ae, ae->length() });
                 }
 
-                if (hv->twin() == halfedgesEnd() || !hv->twin()->isValid()) break;
-                hv = hv->twin()->next();
-                maxSteps--;
-                cout << "push_back v2: max" << maxSteps << "pos" << v0->position << "\n";
+                // Collapse edge
+                cout << "Collapsing edge:" << "\n";
+                VertexIter newVert = collapseEdge(e);
+                if (newVert == verticesEnd() || !newVert->isValid()) continue;
 
-            } while (hv != v1->halfedge() && maxSteps > 0);
+                // Update position & normal
+                newVert->position = 0.5 * (v0->position + v1->position);
+                cout << "new vertex position: " << newVert->position << "\n";
+                newVert->computeNormal();
 
+                HalfedgeIter start = newVert->halfedge();
+                if (start != halfedgesEnd() && start->isValid()) {
+                    HalfedgeIter hv = start;
+                    size_t maxSteps = 50; // safety cap
 
-            for (auto& ae : affectedEdges) {
-                cout << "erase edges:" << "\n";
-                edgeSet.erase({ ae, ae->length() });
-            }
+                    do {
+                        if (hv == halfedgesEnd() || !hv->isValid()) break;
 
-            // Collapse edge
-            cout << "Collapsing edge:" << "\n";
-            VertexIter newVert = collapseEdge(e);
-            if (newVert == verticesEnd() || !newVert->isValid()) continue;
-
-            // Update position & normal
-            newVert->position = 0.5 * (v0->position + v1->position);
-			cout << "new vertex position: " << newVert->position << "\n";
-            newVert->computeNormal();
-
-            HalfedgeIter start = newVert->halfedge();
-            if (start != halfedgesEnd() && start->isValid()) {
-                HalfedgeIter hv = start;
-                size_t maxSteps = 50; // safety cap
-
-                do {
-                    if (hv == halfedgesEnd() || !hv->isValid()) break;
-
-                    EdgeIter ae = hv->edge();
-                    if (ae != edgesEnd() && ae->isValid()) {
-                        double len = ae->length();
-                        std::cout << "in do while inserting length:" << len << "\n";
-                        if (len < threshold) {
-                            edgeSet.insert({ ae, len });
+                        EdgeIter ae = hv->edge();
+                        if (ae != edgesEnd() && ae->isValid()) {
+                            double len = ae->length();
+                            std::cout << "in do while inserting length:" << len << "\n";
+                            if (len < threshold) {
+                                edgeSet.insert({ ae, len });
+                            }
                         }
-                    }
 
-                    if (hv->twin() == halfedgesEnd() || !hv->twin()->isValid()) break;
-                    hv = hv->twin()->next();
-                    maxSteps--;
+                        if (hv->twin() == halfedgesEnd() || !hv->twin()->isValid()) break;
+                        hv = hv->twin()->next();
+                        maxSteps--;
 
-                } while (hv != start && maxSteps > 0);
-            }
+                    } while (hv != start && maxSteps > 0);
+                }
+                std::cerr << "Failed to collect incident edges for vertices." << std::endl;
+                
+			}
 
             collapsesThisFrame++;
         }
 
         std::cout << "Collapses this frame: " << collapsesThisFrame << "\n";
         std::cout << "New vertex count: " << nVertices() << "\n";
+    }
+
+    bool BubbleHGF::collectIncidentEdges(VertexIter v, EdgeIter collapsingEdge,
+        std::vector<EdgeIter>& out) {
+        std::vector<EdgeIter> temp;
+        bool success = true; // Track overall success
+
+        if (!v->isValid()) return false;
+        HalfedgeIter start = v->halfedge();
+        if (start == halfedgesEnd() || !start->isValid()) return false;
+
+        HalfedgeIter hv = start;
+        size_t maxSteps = 500;
+        std::unordered_set<void*> seen;
+
+        do {
+            // Early exit if any step fails
+            if (hv == halfedgesEnd() || !hv->isValid()) {
+                success = false;
+                break;
+            }
+
+            void* key = reinterpret_cast<void*>(&(*hv));
+            if (seen.count(key)) {
+                std::cerr << "Cycle detected in vertex neighborhood\n";
+                success = false;
+                break;
+            }
+            seen.insert(key);
+
+            EdgeIter ae = hv->edge();
+            if (ae != edgesEnd() && ae->isValid() && &(*ae) != &(*collapsingEdge)) {
+                temp.push_back(ae);
+            }
+
+            if (hv->twin() == halfedgesEnd() || !hv->twin()->isValid()) {
+                success = false;
+                break;
+            }
+            hv = hv->twin()->next();
+        } while (hv != start && --maxSteps > 0);
+
+        // Final checks
+        if (maxSteps == 0) {
+            std::cerr << "collectIncidentEdges: hit maxSteps for vertex\n";
+            success = false;
+        }
+
+        // Only commit if everything succeeded
+        if (success) {
+            out.insert(out.end(), temp.begin(), temp.end());
+        }
+        return success;
     }
 
 
