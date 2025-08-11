@@ -64,7 +64,22 @@ namespace CGL {
 
         Eigen::MatrixXd V;
         Eigen::VectorXd Minv;
-		Eigen::MatrixXd M; 
+		Eigen::MatrixXd M;
+
+
+        struct VertexIterHash {
+            size_t operator()(const VertexIter &it) const noexcept {
+                return std::hash<const Vertex *>()(&*it);
+            }
+        };
+
+        struct VertexIterEq {
+            bool operator()(const VertexIter &a, const VertexIter &b) const noexcept {
+                return &*a == &*b;
+            }
+        };
+
+        std::unordered_map<VertexIter, Vector3D, VertexIterHash, VertexIterEq> V_field;
 
         double calculateVolume() const;
         void forwardKinesmatics(double dt);

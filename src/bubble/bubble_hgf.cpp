@@ -146,7 +146,7 @@ namespace CGL {
         for (auto v = verticesBegin(); v != verticesEnd(); ++v, ++idx) {
             vidx[&(*v)] = idx;
         }
-       
+
         //store edges to split 
         vector<EdgeIter> edgesToSplit;
         for (EdgeIter e = edgesBegin(); e != edgesEnd(); ++e) {
@@ -160,7 +160,7 @@ namespace CGL {
         V.conservativeResize(initial_vertex_count + edgesToSplit.size(), 3);
         Minv.conservativeResize(initial_vertex_count + edgesToSplit.size());
         
-        int i = 0; 
+        int i = 0;
         for (EdgeIter e : edgesToSplit) {
             Vertex* v0 = &(*e->halfedge()->vertex());
             Vertex* v1 = &(*e->halfedge()->twin()->vertex());
@@ -197,23 +197,26 @@ namespace CGL {
         double len;
 
         bool operator<(const EdgeLen& other) const {
-            if (fabs(len - other.len) > 1e-12)
+            if (&(*e) == &(*other.e))
+                return false;
+            if (len != other.len)
                 return len < other.len;
             return &(*e) < &(*other.e);
         }
     };
 
+//#define __DEBUG_OUTPUT__
+
     void BubbleHGF::collapseShortEdges(double threshold) {
         Minv.resize(nVertices());
         Minv.setConstant(1.0);
 
+
         std::set<EdgeLen> edgeSet;
         for (EdgeIter e = edgesBegin(); e != edgesEnd(); ++e) {
-            if (!e->isValid() || e->isBoundary()) continue;
             double length = e->length();
-            if (length < threshold) {
-                edgeSet.insert({ e, length });
-            }
+            if (length >= threshold) continue;
+            edgeSet.insert({ e, length });
         }
 
         size_t collapsesThisFrame = 0;
@@ -224,73 +227,71 @@ namespace CGL {
             edgeSet.erase(edgeSet.begin());
 
             EdgeIter e = shortest.e;
-            if (!e->isValid()) continue;
 
             HalfedgeIter h = e->halfedge();
-            if (h == halfedgesEnd() || !h->isValid()) continue;
             HalfedgeIter hTwin = h->twin();
-            if (hTwin == halfedgesEnd() || !hTwin->isValid()) continue;
 
             VertexIter v0 = h->vertex();
             VertexIter v1 = hTwin->vertex();
-            if (!v0->isValid() || !v1->isValid()) continue;
+#ifdef __DEBUG_OUTPUT__
             cout << "before for loop:" << "\n";
-            
+#endif
 
             std::vector<EdgeIter> affectedEdges;
             std::vector<EdgeIter> tempEdgesv0;
             std::vector<EdgeIter> tempEdgesv1;
 
             bool v0insert = collectIncidentEdges(v0, e, tempEdgesv0);
-			bool v1insert = collectIncidentEdges(v1, e, tempEdgesv1);
+            bool v1insert = collectIncidentEdges(v1, e, tempEdgesv1);
+#ifdef __DEBUG_OUTPUT__
             std::cout << std::boolalpha << "v0insert" << v0insert << "v1insert" << v1insert << "\n";
+#endif
             if (v0insert && v1insert) {
                 affectedEdges.insert(affectedEdges.end(), tempEdgesv0.begin(), tempEdgesv0.end());
                 affectedEdges.insert(affectedEdges.end(), tempEdgesv1.begin(), tempEdgesv1.end());
 
-                for (auto& ae : affectedEdges) {
+                for (auto &ae : affectedEdges) {
+#ifdef __DEBUG_OUTPUT__
                     cout << "erase edges:" << "\n";
+#endif
                     edgeSet.erase({ ae, ae->length() });
                 }
+            }
+            // Collapse edge
+#ifdef __DEBUG_OUTPUT__
+            cout << "Collapsing edge:" << "\n";
+#endif
+            Vector3D newPos = 0.5 * (v0->position + v1->position);
+            VertexIter newVert = collapseEdge(e);
 
-                // Collapse edge
-                cout << "Collapsing edge:" << "\n";
-                VertexIter newVert = collapseEdge(e);
-                if (newVert == verticesEnd() || !newVert->isValid()) continue;
+            // Update position & normal
+            newVert->position = newPos;
+#ifdef __DEBUG_OUTPUT__
+            cout << "new vertex position: " << newVert->position << "\n";
+#endif
+            newVert->computeNormal();
 
-                // Update position & normal
-                newVert->position = 0.5 * (v0->position + v1->position);
-                cout << "new vertex position: " << newVert->position << "\n";
-                newVert->computeNormal();
+            HalfedgeIter start = newVert->halfedge();
+            HalfedgeIter hv = start;
 
-                HalfedgeIter start = newVert->halfedge();
-                if (start != halfedgesEnd() && start->isValid()) {
-                    HalfedgeIter hv = start;
-                    size_t maxSteps = 50; // safety cap
-
-                    do {
-                        if (hv == halfedgesEnd() || !hv->isValid()) break;
-
-                        EdgeIter ae = hv->edge();
-                        if (ae != edgesEnd() && ae->isValid()) {
-                            double len = ae->length();
-                            std::cout << "in do while inserting length:" << len << "\n";
-                            if (len < threshold) {
-                                edgeSet.insert({ ae, len });
-                            }
-                        }
-
-                        if (hv->twin() == halfedgesEnd() || !hv->twin()->isValid()) break;
-                        hv = hv->twin()->next();
-                        maxSteps--;
-
-                    } while (hv != start && maxSteps > 0);
+            do {
+                EdgeIter ae = hv->edge();
+                double len = ae->length();
+#ifdef __DEBUG_OUTPUT__
+                std::cout << "in do while inserting length:" << len << "\n";
+#endif
+                if (len < threshold) {
+                    edgeSet.insert({ ae, len });
                 }
-                std::cerr << "Failed to collect incident edges for vertices." << std::endl;
-                
-			}
+                hv = hv->twin()->next();
+            } while (hv != start);
+#ifdef __DEBUG_OUTPUT__
+            std::cerr << "Looped through vertices." << std::endl;
+#endif
 
             collapsesThisFrame++;
+
+
         }
 
         std::cout << "Collapses this frame: " << collapsesThisFrame << "\n";
@@ -304,7 +305,7 @@ namespace CGL {
 
         if (!v->isValid()) return false;
         HalfedgeIter start = v->halfedge();
-        if (start == halfedgesEnd() || !start->isValid()) return false;
+        //if (start == halfedgesEnd() || !start->isValid()) return false;
 
         HalfedgeIter hv = start;
         size_t maxSteps = 500;
@@ -312,28 +313,28 @@ namespace CGL {
 
         do {
             // Early exit if any step fails
-            if (hv == halfedgesEnd() || !hv->isValid()) {
-                success = false;
-                break;
-            }
+            //if (hv == halfedgesEnd() || !hv->isValid()) {
+            //    success = false;
+            //    break;
+            //}
 
-            void* key = reinterpret_cast<void*>(&(*hv));
-            if (seen.count(key)) {
-                std::cerr << "Cycle detected in vertex neighborhood\n";
-                success = false;
-                break;
-            }
-            seen.insert(key);
+            //void* key = reinterpret_cast<void*>(&(*hv));
+            //if (seen.count(key)) {
+            //    std::cerr << "Cycle detected in vertex neighborhood\n";
+            //    success = false;
+            //    break;
+            //}
+            //seen.insert(key);
 
             EdgeIter ae = hv->edge();
-            if (ae != edgesEnd() && ae->isValid() && &(*ae) != &(*collapsingEdge)) {
+            //if (ae != edgesEnd() && ae->isValid() && &(*ae) != &(*collapsingEdge)) {
                 temp.push_back(ae);
-            }
+            //}
 
-            if (hv->twin() == halfedgesEnd() || !hv->twin()->isValid()) {
-                success = false;
-                break;
-            }
+            //if (hv->twin() == halfedgesEnd() || !hv->twin()->isValid()) {
+            //    success = false;
+            //    break;
+            //}
             hv = hv->twin()->next();
         } while (hv != start && --maxSteps > 0);
 
@@ -386,17 +387,6 @@ namespace CGL {
     }
 
 
-    struct VertexIterHash {
-        size_t operator()(const VertexIter &it) const noexcept {
-            return std::hash<const Vertex *>()(&*it);
-        }
-    };
-
-    struct VertexIterEq {
-        bool operator()(const VertexIter &a, const VertexIter &b) const noexcept {
-            return &*a == &*b;
-        }
-    };
 
     void BubbleHGF::forwardKinesmatics(double dt) {
 

@@ -351,116 +351,66 @@ namespace CGL {
     }
 
     VertexIter HalfedgeMesh::collapseEdge(EdgeIter e) {
-        if (!e->isValid()) return verticesEnd();
-        HalfedgeIter h = e->halfedge();
-        HalfedgeIter h_twin = h->twin();
+        HalfedgeIter h01 = e->halfedge();
+        HalfedgeIter h10 = h01->twin();
 
-        if (!h->isValid() || !h_twin->isValid()) return verticesEnd();
-        VertexIter v0 = h->vertex();
-        VertexIter v1 = h_twin->vertex();
+        VertexIter v0 = h01->vertex();
+        VertexIter v1 = h10->vertex();
 
-        if (!v0->isValid() || !v1->isValid()) return verticesEnd();
+        v0->position = (v0->position + v1->position) / 2.0;
 
-        if (v0->isBoundary() != v1->isBoundary()) return verticesEnd();
-
-        VertexIter new_v = newVertex();
-        new_v->position = (v0->position + v1->position) / 2.0;
-        new_v->isNew = false;
-
-
-        HalfedgeIter h_iter = h_twin;
+        HalfedgeIter h_iter = h10;
         size_t safety = 0;
         do {
-            if (!h_iter->isValid() || safety++ > 1000) {
-                deleteVertex(new_v);
-                return verticesEnd(); // Safety break
-            }
-            h_iter->vertex() = new_v;
+            h_iter->vertex() = v0;
             h_iter = h_iter->twin()->next();
-        } while (h_iter != h_twin);
+        } while (h_iter != h10);
 
-        HalfedgeIter h0_next = h->next();
-        HalfedgeIter h0_prev = h0_next->next();
-        HalfedgeIter h1_next = h_twin->next();
-        HalfedgeIter h1_prev = h1_next->next();
+        // opposite of h01 side is a
+        // opposite of h10 side is b
 
-        FaceIter f0 = h->face();
-        FaceIter f1 = h_twin->face();
+        HalfedgeIter h1a = h01->next();
+        HalfedgeIter ha0 = h1a->next();
+        HalfedgeIter h0b = h10->next();
+        HalfedgeIter hb1 = h0b->next();
 
-  
-        h_iter = h_twin;
-        do {
-            cout << "enter do while in collpase" << endl; 
-            h_iter->vertex() = new_v;
-            h_iter = h_iter->twin()->next();
-        } while (h_iter != h_twin);
+        VertexIter va = ha0->vertex();
+        VertexIter vb = hb1->vertex();
 
-        h_iter = h;
-        do {
-            h_iter->vertex() = new_v;
-            h_iter = h_iter->twin()->next();
-        } while (h_iter != h);
+        EdgeIter ea1 = h1a->edge();
+        EdgeIter ea0 = ha0->edge();
+        EdgeIter eb0 = h0b->edge();
+        EdgeIter eb1 = hb1->edge();
 
-   
-        HalfedgeIter h0_next_twin = h0_next->twin();
-        HalfedgeIter h1_next_twin = h1_next->twin();
-        HalfedgeIter h0_prev_twin = h0_prev->twin();
-        HalfedgeIter h1_prev_twin = h1_prev->twin();
+        h1a->twin()->twin() = ha0->twin();
+        ha0->twin()->twin() = h1a->twin();
+        ha0->twin()->edge() = ea1;
 
-		EdgeIter h0_n_edge = h0_next->edge();
-		EdgeIter h1_n_edge = h1_next->edge();
-		EdgeIter h0_p_edge = h0_prev->edge();
-		EdgeIter h1_p_edge = h1_prev->edge();
+        h0b->twin()->twin() = hb1->twin();
+        hb1->twin()->twin() = h0b->twin();
+        h0b->twin()->edge() = eb1;
 
-		h0_next_twin->twin() = h0_prev_twin;
-		h1_next_twin->twin() = h1_prev_twin;
-		h0_prev_twin->twin() = h0_next_twin;
-		h1_prev_twin->twin() = h1_next_twin;
+        ea1->halfedge() = h1a->twin();
+        eb1->halfedge() = hb1->twin();
 
-		h0_n_edge->halfedge() = h0_next_twin;
-		h1_n_edge->halfedge() = h1_next_twin;
+        v0->halfedge() = hb1->twin();
+        va->halfedge() = h1a->twin();
+        vb->halfedge() = h0b->twin();
 
-
-        // Set new vertex's halfedge to one pointing away from it
-        new_v->halfedge() = h0_next->twin()->next();
-        std::cout << "Deleting Halfedge " << &(*h)
-            << " edge=" << (h->edge()->isValid() ? &(*h->edge()) : 0)
-            << " vertex=" << (h->vertex()->isValid() ? &(*h->vertex()) : 0)
-            << "\n";
 
         // First delete halfedges
-        deleteHalfedge(h);
-        deleteHalfedge(h_twin);
-        deleteHalfedge(h0_next);
-        deleteHalfedge(h0_prev);
-        deleteHalfedge(h1_next);
-        deleteHalfedge(h1_prev);
-
-        // Then delete edges (carefully validate first)
-        if (h0_p_edge->isValid()) deleteEdge(h0_p_edge);
-        std::cout << "Deleting Edge " << &(*h0_p_edge) << "valid: " << h0_p_edge->isValid() << "\n";
-
-        if (h1_p_edge->isValid()) {
-            std::cout << "Deleting Edge " << &(*h1_p_edge) << " valid: " << h1_p_edge->isValid() << "\n";
-            deleteEdge(h1_p_edge);
+        deleteFace(h10->face());
+        deleteFace(h01->face());
+        deleteEdge(ea0);
+        deleteEdge(eb0);
+        deleteEdge(e);
+        HalfedgeIter edgeToDelete[] = { h01, h10, h1a, ha0, h0b, hb1 };
+        for (const auto &h : edgeToDelete) {
+            deleteHalfedge(h);
         }
 
-        if (e->isValid()) {
-            std::cout << "Deleting Edge " << &(*e) << " valid: " << e->isValid() << "\n";
-            deleteEdge(e);
-        }
-
-
-
-
-		deleteVertex(v0);
-		deleteVertex(v1);
-
-        if (!f0->isBoundary()) deleteFace(f0);
-        if (!f1->isBoundary()) deleteFace(f1);
-        cout << "all deleted" << endl;
-
-        return new_v;
+        deleteVertex(v1);
+        return v0;
     }
 
 
