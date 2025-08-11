@@ -136,7 +136,6 @@ namespace CGL {
         return totalLength / edgeCount;
     }
 
-
     void BubbleHGF::splitLongEdges(double threshold) {
         const size_t current_vertex_count = nVertices();
         std::unordered_map<Vertex*, size_t> vidx;
@@ -266,7 +265,7 @@ namespace CGL {
                 HalfedgeIter start = newVert->halfedge();
                 if (start != halfedgesEnd() && start->isValid()) {
                     HalfedgeIter hv = start;
-                    size_t maxSteps = 50; // safety cap
+                    size_t maxSteps = 50; 
 
                     do {
                         if (hv == halfedgesEnd() || !hv->isValid()) break;
