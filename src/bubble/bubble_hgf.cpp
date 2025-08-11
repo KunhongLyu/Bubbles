@@ -54,34 +54,41 @@ namespace CGL {
 
         sinceLastUpdate += dt;
 
-        if (sinceLastUpdate > 0.1) {
-            regularizeMesh();
+        if (sinceLastUpdate > 0.03) {
+            regularizeMesh(true);
             sinceLastUpdate = 0.0;
         }
     }
 
-    void BubbleHGF::regularizeMesh() {
+    void BubbleHGF::regularizeMesh(bool full) {
 
         // TODO:
         // maybe use tthe isotropic remeshing algorithm?
-        const int outerIterations = 2;
+        const int outerIterations = 5;
         const int smoothingSteps = 10;
         const double maxEdgeRatio = 4.0 / 3.0;
         const double minEdgeRatio = 4.0 / 5.0;
         double meanEdgeLength = calculateMeanEdgeLength();
+         
+        if (full) {
+            for (int i = 0; i < outerIterations; i++) {
+                collapseShortEdges(meanEdgeLength * minEdgeRatio);
+
+                splitLongEdges(meanEdgeLength * maxEdgeRatio);
 
 
-        for (int i = 0; i < outerIterations; i++) {
-            //splitLongEdges(meanEdgeLength * maxEdgeRatio);
-            collapseShortEdges(meanEdgeLength * minEdgeRatio);
-            //flipEdgesForDegree();
+                //flipEdgesForDegree();
 
-            for (int j = 0; j < smoothingSteps; j++) {
-               // tangentialSmoothing(0.2); 
+                for (int j = 0; j < smoothingSteps; j++) {
+                    tangentialSmoothing(0.2);
+                }
+
+                cout << "next round of outerIteration" << endl;
+                meanEdgeLength = calculateMeanEdgeLength();
             }
-            
-            cout << "next round of outerIteration" << endl; 
-            meanEdgeLength = calculateMeanEdgeLength();
+        }
+        else {
+            collapseShortEdges(meanEdgeLength * minEdgeRatio);
         }
         this->topologyUpdated = true;
    
@@ -224,6 +231,11 @@ namespace CGL {
 
         std::unordered_map<VertexIter, Vector3D, VertexIterHash, VertexIterEq> vertexVelocity;
 
+#ifdef _DEBUG
+        double v0mass;
+        double v1mass;
+        Vector3D velocity;
+#endif
         int idx = 0;
         for (auto v = vertices.begin(); v != vertices.end(); ++v, ++idx) {
             vertexVelocity[v] = Vector3D(V(idx, 0), V(idx, 1), V(idx, 2));
@@ -282,6 +294,10 @@ namespace CGL {
 
             double v0mass = vertexWeight(v0);
             double v1mass = vertexWeight(v1);
+
+
+            vertexVelocity.erase(v0);
+            vertexVelocity.erase(v1);
             // Collapse edge
 #ifdef __DEBUG_OUTPUT__
             cout << "Collapsing edge:" << "\n";
@@ -293,6 +309,13 @@ namespace CGL {
             // Interpolate velocity
             Vector3D newVel = (v0mass * v0Vel + v1mass * v1Vel) / (v0mass + v1mass);
             vertexVelocity[newVert] = newVel;
+#ifdef _DEBUG
+            static volatile double debugMassVelHolder[8] = {
+            v0mass, v1mass,
+            v0Vel.x, v0Vel.y, v0Vel.z,
+            v1Vel.x, v1Vel.y, v1Vel.z
+            };
+#endif
 
 #ifdef __DEBUG_OUTPUT__
             cout << "new vertex position: " << newVert->position << "\n";

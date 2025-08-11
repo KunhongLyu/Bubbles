@@ -70,7 +70,7 @@ namespace CGL {
         double calculateVolume() const;
         void forwardKinesmatics(double dt);
         void correctVolume();
-        void regularizeMesh();
+        void regularizeMesh(bool full);
          
 
         //remesh helper 
