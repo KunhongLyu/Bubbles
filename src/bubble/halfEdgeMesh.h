@@ -691,6 +691,7 @@ namespace CGL {
 #endif
             try {
                 // Basic iterator validity
+                if (!valid) return false; 
                 if (_halfedge == HalfedgeIter()) return false;
 
                 // Check twin exists and points back to us
@@ -732,6 +733,7 @@ namespace CGL {
          * in the original mesh)
          */
         bool isNew;
+        bool valid;
 
         EdgeRecord record;
 
@@ -866,7 +868,7 @@ namespace CGL {
          */
         void deleteHalfedge(HalfedgeIter h) { halfedges.erase(h); }
         void deleteVertex(VertexIter v) { vertices.erase(v); }
-        void deleteEdge(EdgeIter e) { edges.erase(e); }
+        void deleteEdge(EdgeIter e) { e->valid = false;  edges.erase(e); }
         void deleteFace(FaceIter f) { faces.erase(f); }
         void deleteBoundary(FaceIter b) { boundaries.erase(b); }
 

@@ -76,6 +76,7 @@ namespace CGL {
         double calculateMeanEdgeLength() const;
         void splitLongEdges(double threshold); 
         void collapseShortEdges(double threshold);
+        bool BubbleHGF::collectIncidentEdges(VertexIter v, EdgeIter collapsingEdge, std::vector<EdgeIter>& out);
         //void flipEdgesForRegularDegree(); 
         //bool shouldFlipEdge(EdgeIter e) const; 
         //void tangentialSmoothing(double weight); 
