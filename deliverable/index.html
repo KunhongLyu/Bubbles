@@ -207,21 +207,183 @@
                 </p>
             </p>
 
-        
-
-
-       <h3>2. Edge Operations</h3>
+            <h3>2. Edge Operations</h3>
 
              <p>
             To maintain a uniform and well-conditioned mesh for bubble simulation, 
             we perform three key edge operations: 
             <em>splitting long edges</em>, <em>collapsing short edges</em>, and <em>flipping 
                 edges for regularity</em>.  
-            These operations work together to prevent extreme variations in edge length, reduce degeneracies, and 
-            improve the overall mesh structure,.
+           Together they prevent extreme variations in edge length, reduce degeneracies, and 
+            improve the overall mesh structure.
              </p>
                 <h4> Edge Splitting </h4>
-            
+            <p>
+                Splitting splits the edges that has length exceeds the target threshold of 
+                \(\frac{4L}{3}\), where \(L\) is the mean edge length. We start with iterating all edges and 
+                identifying such edges. We call the splitedge method in the halfedgeMesh class, which
+                 inserts a new vertex at the midpoint between 
+                the two original vertices. The velocity of this new vertex is computed as 
+                a mass-weighted interpolation of its parent vertices:  
+                \[
+                \mathbf{v}_{\text{new}} = \frac{m_0\,\mathbf{v}_0 + m_1\,\mathbf{v}_1}{m_0 + m_1}
+                \]
+                The inverse mass of the new vertex is 
+                assigned as  
+                \[
+                m_{\text{new}}^{-1} = \frac{1}{m_0 + m_1}
+                \]
+            </p>
+                      
+
+            <h4>Collapsing Short Edges</h4>
+                <p>
+                    Collapse operations collapse edges shorter than \(\frac{4L}{5}\) to remove 
+                    degenerate geometry and avoid overly dense vertex clustering. When such an 
+                    edge is collapsed, the two endpoints are replaced by a single vertex positioned 
+                    at their midpoint. The velocity of the merged vertex is calculated using 
+                    the same momentum-preserving formula as in splitting:
+                    \[
+                    \mathbf{v}_{\text{new}} = \frac{m_0\,\mathbf{v}_0 + m_1\,\mathbf{v}_1}{m_0 + m_1}.
+                    \]
+                    After collapse, the surrounding edge lengths are recalculated and the 
+                    priority queue of candidate edges is updated to ensure consistency.
+                </p>
+
+                    <h3>Edge Flipping for Regular Vertex Degree</h3>
+            <p>To optimize mesh connectivity and improve triangle quality, we implement a valence-aware edge flipping operation. The goal is to reduce deviation from the ideal vertex degree of 6 (for interior vertices), which promotes regularity and stability in the mesh.</p>
+            <p>Each edge \( e \) shared by two triangles is evaluated using a valence energy metric:</p>
+            <div class="eq">\[E_{\text{valence}} = \sum_{v \in \{a_1, a_2, b_1, b_2\}} |d(v) - 6|\]</div>
+            <p>Here, \( a_1 \) and \( a_2 \) are the vertices of the current edge, and \( b_1 \), \( b_2 \) are the opposite vertices from the adjacent triangles. The degrees \( d(v) \) represent the number of edges incident to each vertex.</p>
+
+            <h4>Flip Condition</h4>
+            <p>An edge \( e = (a_1, a_2) \) is flipped to \( e' = (b_1, b_2) \) if the valence energy after flipping is sufficiently lower than before:</p>
+            <div class="eq">\[E_{\text{after}} + \epsilon < E_{\text{before}}\]</div>
+            <p>where \( \epsilon = 0.1 \) is a small hysteresis threshold used to prevent flip-flop oscillations.</p>
+
+            <h4>Smooth Geometry Preservation</h4>
+            <p>To maintain surface smoothness during topology changes, the positions of the flipped vertices \( b_1 \) and \( b_2 \) are blended toward the midpoint of the original edge:</p>
+            <div class="eq">\[\begin{aligned}\mathbf{m} &= \tfrac{1}{2}(\mathbf{p}_{a_1} + \mathbf{p}_{a_2}) \\\mathbf{p}_{b_1} &\leftarrow (1 - \alpha)\mathbf{p}_{b_1} + \alpha \mathbf{m} \\\mathbf{p}_{b_2} &\leftarrow (1 - \alpha)\mathbf{p}_{b_2} + \alpha \mathbf{m}\end{aligned}\]</div>
+            <p>with blending factor \( \alpha = 0.1 \).</p>
+
+
+                <h2>3. Full Remeshing Pipeline (<code>regularizeMesh</code>)</h2>
+
+<p><strong>Purpose:</strong> Integrates splitting, collapsing, flipping, and tangential smoothing to keep the mesh well-conditioned during evolution.</p>
+
+<h3>Algorithm</h3>
+<ol>
+    <li>
+        <strong>Compute mean edge length</strong><br>
+        The target length <em>L</em> is the average edge length:
+        <br>
+        <code>
+            L = (1 / |E|) * Σ<sub>e=(i,j)∈E</sub> ||p<sub>i</sub> - p<sub>j</sub>||
+        </code>
+    </li>
+
+    <li>
+        <strong>Iterative remeshing</strong> (<em>outerIterations = 5</em>)<br>
+        For each outer iteration:
+        <ul>
+            <li>Collapse edges shorter than a threshold (e.g., 0.8 &times; L).</li>
+            <li>Split edges longer than a threshold (e.g., 1.33 &times; L).</li>
+            <li>Apply tangential smoothing for a small number of steps (e.g., 5) to relax vertex positions while minimizing normal displacement.</li>
+        </ul>
+    </li>
+
+    <li>
+        <strong>Flag topology changed</strong><br>
+        After remeshing, set <code>topologyUpdated = true</code> so downstream systems know to refresh any derived data.
+    </li>
+</ol>
+
+<p>
+    The remeshing pipeline combines local topology edits and geometry-aware smoothing to sustain mesh quality throughout dynamic simulation.
+    By using the mean edge length <em>L</em> as a moving target, the system collapses overly short edges and splits overly long ones so triangle sizes remain consistent.
+    Tangential smoothing redistributes vertices without significantly altering surface normals, while optional edge flips further regularize vertex valence.
+    Crucially, when topology changes occur, the implementation transfers velocities using mass-weighted interpolation, preserving momentum and preventing spurious kinetic artifacts.
+    The result is a robust, self-correcting loop: good geometry supports stable physics, and physically consistent updates guide appropriate remeshing, reducing degenerate elements and improving simulation reliability.
+</p>
+
+
+
+        <h2>Bubble BSDF</h2>
+        <p class="muted">
+            In rendering the bubbles for this project, we extended the HW3 code to incorporate physically accurate thin-film transmission and reflection.
+            A bubble is essentially an extremely thin double surface. When light enters from one side, it can bounce back and forth between the two
+            interfaces. However, because the film is so thin, these internal reflections have little effect on the final exit direction of the light.
+            Therefore, we use Snell’s Law directly to determine the exit angle.
+        </p>
+        <div class="eq">
+            \[
+            n_0 · \sin \theta_0 = n_f · \sin \theta_f
+            \]
+            \[
+            \cos \theta_f = √ [ 1 − (n_0/n_f)^2 · (1 − \cos^2\theta_0) ]
+            \]
+        </div>
+
+
+        <p>
+            The internal bounces of light within the bubble require accurate physical modeling. This is achieved using Fresnel coefficients, which are
+            complex quantities that describe how the amplitude and phase of the electromagnetic field change for perpendicular and parallel polarizations
+            during a single reflection or transmission event.
+        </p>
+        <div class="eq">
+            \[
+            r_{01}^{s} = \frac{n_{0} \cos\theta_{0} - n_{f} \cos\theta_{f}}
+            {n_{0} \cos\theta_{0} + n_{f} \cos\theta_{f}}
+            \]
+            \[
+            r_{01}^{p} = \frac{n_{f} \cos\theta_{0} - n_{0} \cos\theta_{f}}
+            {n_{f} \cos\theta_{0} + n_{0} \cos\theta_{f}}
+            \]
+        </div>
+        <div class="eq">
+            \[
+            t_{01}^{s} = \frac{ 2\,n_{0} \cos\theta_{0} }
+            { n_{0} \cos\theta_{0} + n_{f} \cos\theta_{f} }
+            \]
+            \[
+            t_{01}^{p} = \frac{ 2\,n_{0} \cos\theta_{0} }
+            { n_{f} \cos\theta_{0} + n_{0} \cos\theta_{f} }
+            \]
+        </div>
+        <p>The f|3 case is analogous for r<sub>12</sub><sup>⋅</sup>, t<sub>12</sub><sup>⋅</sup>.</p>
+        <p>
+            The above calculations assume that the Fresnel coefficients correspond only to phase shifts of 0° or 180°.
+            However, this simplification is insufficient for accurately simulating light behavior in thin films. To capture the true interference effects,
+            we must also account for the continuous phase change introduced by the optical path difference within the film. This is represented by the complex
+            factor \(e^{i\delta}\), where \(\delta\) is the phase thickness determined by the film’s refractive index, thickness, and the wavelength of light.
+        </p>
+        <div class="eq">
+            \[\delta = (2\pi · n_f · d · \cos \theta_f) / \lambda\]
+        </div>
+        <p>
+            Using the computed Fresnel coefficients, we perform an Airy summation to account for the infinite series of reflections within the
+            thin film. Since each successive bounce is scaled by a constant complex factor (\(r_{01}r_{12}e^{i \, 2\delta}\)), this summation can be
+            expressed as a geometric series, leading to the Airy closed-form solution.
+        </p>
+        <div class="eq">
+            \[
+            r_{tot}^{\cdot} = \frac{ r_{01}^{\cdot} + r_{12}^{\cdot} \, e^{i \, 2\delta} }
+            { 1 + r_{01}^{\cdot} r_{12}^{\cdot} \, e^{i \, 2\delta} }
+            \]
+            \[
+            t_{tot}^{\cdot} = \frac{ t_{01}^{\cdot} t_{12}^{\cdot} \, e^{i \, \delta} }
+            { 1 + r_{01}^{\cdot} r_{12}^{\cdot} \, e^{i \, 2\delta} }
+            \]
+        </div>
+        <p>
+            From the total polarization amplitudes of reflection and transmission, we can compute the corresponding light intensities by taking
+            \(R^⋅ = | r_{tot}^⋅ |^2\) and \(T^⋅ = ( n_3\cos \theta_3 / ( n_0\cos \theta_0 ) ) · | t_{tot}^⋅ |^2\). Finally, assuming the incident light is
+            unpolarized, we obtain the final reflected and transmittedintensities by averaging the results for perpendicular (s) and parallel
+            (p) polarizations \(R = ( R^s + R^p )/2, \quad T = ( T^s + T^p )/2\).
+        </p>
+
+
+
 
 
         <section class="card">
