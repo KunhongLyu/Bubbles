@@ -36,74 +36,83 @@
         <h2>Setup of the Environement</h2>
 
         <h2>Forward Kinematics and Velocity Update</h2>
-            
-            <p>To simluate the film movement over time, we implement a forward kinematics 
-                step that integrates vertex positions from their velocities and updates 
-                the velocities from forces derived from a cotangent-weighted Laplacian operator. 
-                It require building a mass matrix  \( M \), a Laplacian matrix  \( L \), and a position matrix  \( X \), then integrates
-                 forward in time using a semi-implicit scheme.
 
-                Let \( n \) denote the number of vertices. Each vertex <code>i</code> has position \( \mathbf{p}_i \) 
-                and velocity \( \mathbf{v}_i \).</p>
+        <p>
+            To simluate the film movement over time, we implement a forward kinematics
+            step that integrates vertex positions from their velocities and updates
+            the velocities from forces derived from a cotangent-weighted Laplacian operator.
+            It require building a mass matrix  \( M \), a Laplacian matrix  \( L \), and a position matrix  \( X \), then integrates
+            forward in time using a semi-implicit scheme.
 
-            <h3>Mass Matrix</h3>
-            <p>We compute a diagonal inverse mass matrix \( \mathbf{M}^{-1} \) 
-                using barycentric area distribution. For a triangular face with 
-                vertices <code>i,j,k</code>, the area contribution is</p>
-            <div class="eq">
-                \[ \text{share} = \big\|(\mathbf{p}_j - \mathbf{p}_i) \times (\mathbf{p}_k - \mathbf{p}_i)\big\|. \]
-            </div>
-            <p> Each vertex's mass is computed from the sum of one-third of the area of its incident triangles.The inverse mass matrix is computed as:</p>
+            Let \( n \) denote the number of vertices. Each vertex <code>i</code> has position \( \mathbf{p}_i \)
+            and velocity \( \mathbf{v}_i \).
+        </p>
 
-            <div class="eq">
-                \[ M_{ii}^{-1} = \frac{6}{\max(\text{mass}_i, \varepsilon)} \]
-             </div>
-                
-        
-                <p>
-                where \( \text{mass}_i \) is the sum of the areas of adjacent triangles.
-                The factor of 6 accounts for barycentric weighting:
-                each triangle contributes \( \frac{1}{3} \) of its area to each vertex,
-                and the area computation does not account the usual \( \frac{1}{2} \) factor,
-                hence resulting in an overestimation by a factor of 6.
-                </p>
+        <h3>Mass Matrix</h3>
+        <p>
+            We compute a diagonal inverse mass matrix \( \mathbf{M}^{-1} \)
+            using barycentric area distribution. For a triangular face with
+            vertices <code>i,j,k</code>, the area contribution is
+        </p>
+        <div class="eq">
+            \[ \text{share} = \big\|(\mathbf{p}_j - \mathbf{p}_i) \times (\mathbf{p}_k - \mathbf{p}_i)\big\|. \]
+        </div>
+        <p> Each vertex's mass is computed from the sum of one-third of the area of its incident triangles.The inverse mass matrix is computed as:</p>
 
-            <h3>Laplacian Matrix</h3>
-            <p>The Laplacian \( \mathbf{L} \) computes smoothing forces using cotangent weights for each edge.</p>
-            <p>
+        <div class="eq">
+            \[ M_{ii}^{-1} = \frac{6}{\max(\text{mass}_i, \varepsilon)} \]
+        </div>
+
+
+        <p>
+            where \( \text{mass}_i \) is the sum of the areas of adjacent triangles.
+            The factor of 6 accounts for barycentric weighting:
+            each triangle contributes \( \frac{1}{3} \) of its area to each vertex,
+            and the area computation does not account the usual \( \frac{1}{2} \) factor,
+            hence resulting in an overestimation by a factor of 6.
+        </p>
+
+        <h3>Laplacian Matrix</h3>
+        <p>The Laplacian \( \mathbf{L} \) computes smoothing forces using cotangent weights for each edge.</p>
+        <p>
             Cotangent weight for edge \((i, j)\) calculation where \(\alpha\) and \(\beta\) are the angles opposite the edge in the two adjacent triangles.:
             <div class="eq">
-            \[ w_{ij} = \frac{1}{2} \left( \cot \alpha + \cot \beta \right)\]
+                \[ w_{ij} = \frac{1}{2} \left( \cot \alpha + \cot \beta \right)\]
             </div>
-            </p>
-           
-            <p>Individual weights then are inserted symmetrically and diagonals ensure row sums are zero:</p>
-            <div class="eq">
-                \[ L_{ii} = -\sum_{j \in \mathcal{N}(i)} w_{ij}. \]
-            </div>
+        </p>
 
-            <h3>Velocity and Position Update</h3>
-            <p>We compute accelerations from the Laplacian acting on the position matrix \( \mathbf{X} \) and integrate velocities explicitly. Using timestep \( \Delta t \):</p>
-            <div>
-                \[ \mathbf{a} = \mathbf{M}^{-1} \mathbf{L} \mathbf{X} \]
-            </div>
-            <div>
-                \[ \mathbf{V}(t + \Delta t) = \mathbf{V}(t) + \Delta t \, \mathbf{a} \]
-            </div>
-            <div>
-                \[ \mathbf{X}(t + \Delta t) = \mathbf{X}(t) + \Delta t \, \mathbf{V}(t + \Delta t) \]
-            </div>
-            <p>In this explicit Euler process, velocity is updated based on the current acceleration, and the 
-                position is then integrated forward using the updated velocity.</p>
+        <p>Individual weights then are inserted symmetrically and diagonals ensure row sums are zero:</p>
+        <div class="eq">
+            \[ L_{ii} = -\sum_{j \in \mathcal{N}(i)} w_{ij}. \]
+        </div>
+
+        <h3>Velocity and Position Update</h3>
+        <p>We compute accelerations from the Laplacian acting on the position matrix \( \mathbf{X} \) and integrate velocities explicitly. Using timestep \( \Delta t \):</p>
+        <div>
+            \[ \mathbf{a} = \mathbf{M}^{-1} \mathbf{L} \mathbf{X} \]
+        </div>
+        <div>
+            \[ \mathbf{V}(t + \Delta t) = \mathbf{V}(t) + \Delta t \, \mathbf{a} \]
+        </div>
+        <div>
+            \[ \mathbf{X}(t + \Delta t) = \mathbf{X}(t) + \Delta t \, \mathbf{V}(t + \Delta t) \]
+        </div>
+        <p>
+            In this explicit Euler process, velocity is updated based on the current acceleration, and the
+            position is then integrated forward using the updated velocity.
+        </p>
 
 
 
-          
+
         <h2>Remshing/Retopology</h2>
 
         <h2>Bubble BSDF</h2>
         <p class="muted">
-            In rendering the bubbles for this project, we extended the HW3 code to incorporate physically accurate thin-film transmission and reflection. Our first step was to implement a helper function <code>thin_film_RT</code> to compute the intensities of light that are reflected and refracted by the bubble’s surface. We specified the film’s refractive index 𝑛<sub>𝑓</sub>, its thickness 𝑑, and the refractive index of air 𝑛<sub>0</sub>. Using these parameters, along with the light’s wavelength λ and incident angle 𝜃<sub>0</sub>, we first applied Snell’s law to calculate the film angle 𝜃<sub>𝑓</sub>.
+            In rendering the bubbles for this project, we extended the HW3 code to incorporate physically accurate thin-film transmission and reflection.
+            A bubble is essentially an extremely thin double surface. When light enters from one side, it can bounce back and forth between the two
+            interfaces. However, because the film is so thin, these internal reflections have little effect on the final exit direction of the light.
+            Therefore, we use Snell’s Law directly to determine the exit angle.
         </p>
         <div class="eq">
             \[
@@ -113,12 +122,13 @@
             cos θ_f = √ [ 1 − (n_0/n_f)^2 · (1 − cos^2θ_0) ]
             \]
         </div>
-        <p>Thin film phase retardation:</p>
-        <div class="eq">
-            \[δ = (2π · n_f · d · cos θ_f) / λ\]
-        </div>
 
-        <p>We then applied the following formulas to compute the Fresnel reflection (r) and transmission (t) amplitude coefficients for both s polarization (vertical) and p-polarization (parallel).</p>
+
+        <p>
+            The internal bounces of light within the bubble require accurate physical modeling. This is achieved using Fresnel coefficients, which are
+            complex quantities that describe how the amplitude and phase of the electromagnetic field change for perpendicular and parallel polarizations
+            during a single reflection or transmission event.
+        </p>
         <div class="eq">
             \[
             r_{01}^{s} = \frac{n_{0} \cos\theta_{0} - n_{f} \cos\theta_{f}}
@@ -140,9 +150,20 @@
             \]
         </div>
         <p>The f|3 case is analogous for r<sub>12</sub><sup>⋅</sup>, t<sub>12</sub><sup>⋅</sup>.</p>
-
-        <p>Finally, we applied the Airy closed-form solution to compute the final reflected and transmitted light intensities.</p>
-        <p>The total amplitude reflection and transmission for the thin film (phase factor e<sup>iδ</sup>) are:</p>
+        <p>
+            The above calculations assume that the Fresnel coefficients correspond only to phase shifts of 0° or 180°.
+            However, this simplification is insufficient for accurately simulating light behavior in thin films. To capture the true interference effects,
+            we must also account for the continuous phase change introduced by the optical path difference within the film. This is represented by the complex
+            factor \(e^{iδ}\), where δ is the phase thickness determined by the film’s refractive index, thickness, and the wavelength of light.
+        </p>
+        <div class="eq">
+            \[δ = (2π · n_f · d · cos θ_f) / λ\]
+        </div>
+        <p>
+            Using the computed Fresnel coefficients, we perform an Airy summation to account for the infinite series of reflections within the
+            thin film. Since each successive bounce is scaled by a constant complex factor (\(r_{01}r_{12}e^{i \, 2\delta}\)), this summation can be
+            expressed as a geometric series, leading to the Airy closed-form solution.
+        </p>
         <div class="eq">
             \[
             r_{tot}^{\cdot} = \frac{ r_{01}^{\cdot} + r_{12}^{\cdot} \, e^{i \, 2\delta} }
@@ -153,27 +174,21 @@
             { 1 + r_{01}^{\cdot} r_{12}^{\cdot} \, e^{i \, 2\delta} }
             \]
         </div>
-        <p>Convert amplitude to power (intensity) and apply radiometric correction for transmission:</p>
-        <div class="eq">
-            \[
-            R^⋅ = | r_{tot}^⋅ |^2
-            \]
-            \[
-            T^⋅ = ( n_3cos θ_3 / ( n_0cos θ_0 ) ) · | t_{tot}^⋅ |^2
-            \]
-        </div>
-        <p>For unpolarized light, take the s/p average:</p>
-        <div class="eq">
-            \[
-            R = ( R^s + R^p )/2, \quad
-            T = ( T^s + T^p )/2
-            \]
-        </div>
-        <p>After this the <code>thin_film_RT</code> can return the intensity ratio of the reflected light and the transmiited light compared to the incident light.</p>
+        <p>
+            From the total polarization amplitudes of reflection and transmission, we can compute the corresponding light intensities by taking
+            \(R^⋅ = | r_{tot}^⋅ |^2\) and \(T^⋅ = ( n_3cos θ_3 / ( n_0cos θ_0 ) ) · | t_{tot}^⋅ |^2\). Finally, assuming the incident light is
+            unpolarized, we obtain the final reflected and transmittedintensities by averaging the results for perpendicular (s) and parallel
+            (p) polarizations \(R = ( R^s + R^p )/2, \quad T = ( T^s + T^p )/2\).
+        </p>
 
         <section class="card">
             <h3>Delta BSDF Sampling</h3>
-            <p>To ensure our bubble bsdf rendering returns the correct color, we construct an RGB wavelength channel and use the helper function we just implemented to obtain the reflectance and transmittance for each RGB wavelength. We then use sRGB weights to calculate the reflected intensity \(w_R\) and transmitted intensity \(w_T\) perceived by the human eye. We then calculate the light reflection probability \(p_R = w_R / (w_T + w_R)\) and use it to determine whether the sample returns reflected or transmitted light.</p>
+            <p>
+                To ensure our bubble bsdf rendering returns the correct color, we construct an RGB wavelength channel and use the helper function we just
+                implemented to obtain the reflectance and transmittance for each RGB wavelength. We then use sRGB weights to calculate the reflected
+                intensity \(w_R\) and transmitted intensity \(w_T\) perceived by the human eye. We then calculate the light reflection probability
+                \(p_R = w_R / (w_T + w_R)\) and use it to determine whether the sample returns reflected or transmitted light.
+            </p>
             <ul>
                 <li><b>Reflection geometry</b>: perfect mirror (local reflection). \(f_{refl} = ( R_{rgb} · p_R) / |cos θ_i|\).</li>
                 <li><b>Transmission geometry</b>: for a single-sided thin film, approximate as straight-through (local \(ω_i = −ω_o\)). &nbsp;\(f_{trans} = ( T_{rgb} · p_T ) / |cos θ_i|\).</li>
