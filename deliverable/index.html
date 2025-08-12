@@ -36,15 +36,26 @@
         <h2>Setup of the Environement</h2>
 
         <h2>Forward Kinematics and Velocity Update</h2>
-
         <p>
-            To simluate the film movement over time, we implement a forward kinematics
-            step that integrates vertex positions from their velocities and updates
-            the velocities from forces derived from a cotangent-weighted Laplacian operator.
-            It require building a mass matrix  \( M \), a Laplacian matrix  \( L \), and a position matrix  \( X \), then integrates
-            forward in time using a semi-implicit scheme.
-
-            Let \( n \) denote the number of vertices. Each vertex <code>i</code> has position \( \mathbf{p}_i \)
+            This simulation models soap bubble films as a dynamic mesh evolving under surface tension forces.
+            The key insight is that the three well-known geometric perspectives (mean curvature, Laplacian smoothing, and the functional derivative of the area functional) 
+            are mathematically equivalent under this context: 
+            The mean curvature flow guide how the surface shrink and smooth out, mirroring how surface tension 
+            minimizes film's surface area. 
+            Computationally, this behavior can be modeled using the cotangent-weighted Laplacian,
+            which applies smoothing forces based on the shape of the mesh. 
+            Mathematically, these forces also come from the gradient of the surface area, with cotangent weights
+             appearing through proper energy discretization. 
+        </p>
+        <p>
+            To simluate film movement over time, we uses forward kinematics
+            step that updates vertex positions from their velocities and computes
+            new velocities from Laplacian-derived forces.
+            This implementation requires three main components: a mass matrix  \( M \), 
+            a Laplacian matrix  \( L \), and a position matrix  \( X \).
+        </p>
+        <p>
+            Let \( n \) denote the number of vertices the system have. Each vertex <code>i</code> has position \( \mathbf{p}_i \)
             and velocity \( \mathbf{v}_i \).
         </p>
 
@@ -101,40 +112,69 @@
             In this explicit Euler process, velocity is updated based on the current acceleration, and the
             position is then integrated forward using the updated velocity.
         </p>
+        <p>
+        To maintain physically realistic bubble behavior, we enforce <strong>volume conservation</strong> through correction step.
+        After each position update, we compute the current bubble volume and apply a uniform scaling about the center of mass:
+        </p>
 
-        <h2>Velocity Treatment During Topology Changes</h2>
-        <p>Topological operations (edge collapse and split) must handle vertex velocities in a way that preserves momentum and avoids introducing spurious energy.</p>
-
-        <h3>Edge Collapse</h3>
-        <p>Given an edge connecting vertices <code>i</code> and <code>j</code>, with masses \( m_i \), \( m_j \) and velocities \( \mathbf{v}_i \), \( \mathbf{v}_j \), collapse yields a new vertex <code>k</code>. The merged position is typically the midpoint:</p>
         <div class="eq">
-            \[ \mathbf{p}_k = \tfrac{1}{2}(\mathbf{p}_i + \mathbf{p}_j). \]
-        </div>
-        <p>The new vertex velocity is set by mass-weighted averaging to conserve linear momentum:</p>
-        <div class="eq">
-            \[ \mathbf{v}_k = \dfrac{m_i \mathbf{v}_i + m_j \mathbf{v}_j}{m_i + m_j}. \]
-        </div>
-        <p>This ensures the pre-collision momentum equals the post-collapse momentum:</p>
-        <div class="eq">
-            \[ m_i \mathbf{v}_i + m_j \mathbf{v}_j = (m_i + m_j) \mathbf{v}_k. \]
+        \[
+        \text{scale} = \left( \frac{V_{\text{target}}}{V_{\text{current}}} \right)^{1/3}
+        \]
         </div>
 
-        <h3>Edge Split</h3>
-        <p>When splitting edge <code>(i,j)</code>, a new vertex <code>k</code> is placed along the edge at fraction \( t \) (0 ≤ t ≤ 1):</p>
-        <div class="eq">
-            \[ \mathbf{p}_k = (1-t)\mathbf{p}_i + t\mathbf{p}_j. \]
-        </div>
-        <p>The velocity is interpolated equivalently to maintain field smoothness:</p>
-        <div class="eq">
-            \[ \mathbf{v}_k = (1-t)\mathbf{v}_i + t\mathbf{v}_j. \]
-        </div>
-        <p>For a midpoint split (\( t=0.5 \)): \( \mathbf{v}_k = (\mathbf{v}_i + \mathbf{v}_j)/2 \).</p>
+        <p>
+        The correction process involves:
+        </p>
+
+        <ol>
+        <li>
+            Compute the bubble's center of mass:
+            \[
+            \mathbf{c} = \frac{1}{n} \sum_{i=1}^{n} \mathbf{p}_i
+            \]
+        </li>
+        <li>
+            Scale all vertices uniformly about <strong>c</strong>:
+            \[
+            \mathbf{p}_i^{\text{new}} = \mathbf{c} + \text{scale} \cdot (\mathbf{p}_i - \mathbf{c})
+            \]
+        </li>
+        </ol>
+
+        <p>
+        This correction preserves the bubble's shape while maintains the target bubble volume.
+        It runs everytime after each position update, but before any topology changes (remeshing).
+        </p>
+
+
+        <h2>Isotropic Remeshing</h2>
+        <p>Forward kinematics steps could result in mesh 
+             irregularities, especially near poles where vertices may clusters. 
+             This happens because:
+             <ul>
+             <li>Pole Divergence: Vertices near poles experience higher curvature forces,
+                 causing them to accelerate faster and more clustered.</li>
+             <li>Edge Length Disparity: Some edges stretch too much (> 4L/3), while others 
+                shrink (< 4L/5), leading to poor mesh quality.</li>
+             </ul>
+            <div style="display: flex; gap: 10px; justify-content: center; margin: 20px 0;">
+            <img src="images/mesh_initial.png" alt="Initial mesh" style="width: 18%; border: 1px solid #ccc;">
+            <img src="images/pole_clustering.png" alt="Pole clustering" style="width: 18%; border: 1px solid #ccc;">
+            <img src="images/edge_disparity.png" alt="Edge disparity" style="width: 18%; border: 1px solid #ccc;">
+            <img src="images/remeshing_applied.png" alt="Remeshing applied" style="width: 18%; border: 1px solid #ccc;">
+            <img src="images/final_mesh.png" alt="Final mesh" style="width: 18%; border: 1px solid #ccc;">
+            </div>
+        <p>To restore mesh uniformity, we apply isotropic remeshing, which adjusts 
+            edge lengths and redistributes vertices to maintain consistent triangle shapes and sizes.
+        </p>
 
 
 
 
 
-        <h2>Remshing/Retopology</h2>
+
+        </p>
 
         <h2>Bubble BSDF</h2>
         <p class="muted">
@@ -209,6 +249,36 @@
             unpolarized, we obtain the final reflected and transmittedintensities by averaging the results for perpendicular (s) and parallel
             (p) polarizations \(R = ( R^s + R^p )/2, \quad T = ( T^s + T^p )/2\).
         </p>
+
+        <h2>Velocity Treatment During Topology Changes</h2>
+        <p>Topological operations (edge collapse and split) must handle vertex velocities in a way that preserves momentum and avoids introducing spurious energy.</p>
+
+        <h3>Edge Collapse</h3>
+        <p>Given an edge connecting vertices <code>i</code> and <code>j</code>, with masses \( m_i \), \( m_j \) and velocities \( \mathbf{v}_i \), \( \mathbf{v}_j \), collapse yields a new vertex <code>k</code>. The merged position is typically the midpoint:</p>
+        <div class="eq">
+            \[ \mathbf{p}_k = \tfrac{1}{2}(\mathbf{p}_i + \mathbf{p}_j). \]
+        </div>
+        <p>The new vertex velocity is set by mass-weighted averaging to conserve linear momentum:</p>
+        <div class="eq">
+            \[ \mathbf{v}_k = \dfrac{m_i \mathbf{v}_i + m_j \mathbf{v}_j}{m_i + m_j}. \]
+        </div>
+        <p>This ensures the pre-collision momentum equals the post-collapse momentum:</p>
+        <div class="eq">
+            \[ m_i \mathbf{v}_i + m_j \mathbf{v}_j = (m_i + m_j) \mathbf{v}_k. \]
+        </div>
+
+        <h3>Edge Split</h3>
+        <p>When splitting edge <code>(i,j)</code>, a new vertex <code>k</code> is placed along the edge at fraction \( t \) (0 ≤ t ≤ 1):</p>
+        <div class="eq">
+            \[ \mathbf{p}_k = (1-t)\mathbf{p}_i + t\mathbf{p}_j. \]
+        </div>
+        <p>The velocity is interpolated equivalently to maintain field smoothness:</p>
+        <div class="eq">
+            \[ \mathbf{v}_k = (1-t)\mathbf{v}_i + t\mathbf{v}_j. \]
+        </div>
+        <p>For a midpoint split (\( t=0.5 \)): \( \mathbf{v}_k = (\mathbf{v}_i + \mathbf{v}_j)/2 \).</p>
+
+
 
         <section class="card">
             <h3>Delta BSDF Sampling</h3>
