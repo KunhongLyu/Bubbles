@@ -207,92 +207,21 @@
                 </p>
             </p>
 
-            <h3>2. Edge Operations</h3>
-
-            <h4> Edge Splitting </h4>
-            <p><strong>Purpose:</strong> Splits edges longer than <span class="highlight">4L/3</span> to improve mesh uniformity.</p>
-
-            <h4>Steps:</h4>
-            <ol>
-                <li><strong>Identify Long Edges</strong> (<span class="highlight">e->length() > threshold</span>).</li>
-                
-                <li><strong>Split Edge:</strong><br>
-                    Creates a new vertex at the midpoint using <span class="highlight">splitEdge(e)</span> from HalfEdgeMesh.
-                    <div class="code">VertexIter newVert = splitEdge(e);
-            newVert->position = 0.5 * (v0->position + v1->position);</div>
-                </li>
-                
-                <li><strong>Interpolate Velocity (mass-weighted):</strong><br>
-                    The new vertex's velocity is computed as a mass-weighted average of the original edge vertices:
-                    <div class="code">V.row(new_idx) = (m0 * V.row(i0) + m1 * V.row(i1)) / (m0 + m1);</div>
-                    where <span class="highlight">m0</span> and <span class="highlight">m1</span> are the masses of the original vertices.
-                </li>
-                
-                <li><strong>Update Mass</strong> (<span class="highlight">Minv(new_idx) = 1.0 / (m0 + m1)</span>).</li>
-            </ol>
-
-            <h3>(B) Collapsing Short Edges (collapseShortEdges)</h3>
-            <p><strong>Purpose:</strong> Collapses edges shorter than <span class="highlight">4L/5</span> to remove degeneracies.</p>
-
-            <h4>Steps:</h4>
-            <ol>
-                <li><strong>Identify Short Edges</strong> (<span class="highlight">e->length() < threshold</span>).</li>
-                
-                <li><strong>Collapse Edge:</strong><br>
-                    Merges two vertices into one at the midpoint using <span class="highlight">collapseEdge(e)</span> from HalfEdgeMesh.
-                    <div class="code">VertexIter newVert = collapseEdge(e);
-            newVert->position = 0.5 * (v0->position + v1->position);</div>
-                </li>
-                
-                <li><strong>Interpolate Velocity (mass-weighted):</strong><br>
-                    The new vertex's velocity preserves momentum:
-                    <div class="code">Vector3D newVel = (v0mass * v0Vel + v1mass * v1Vel) / (v0mass + v1mass);</div>
-                    This ensures conservation of linear momentum during the collapse operation.
-                </li>
-                
-                <li><strong>Update Affected Edges:</strong><br>
-                    Recomputes lengths and reinserts into priority queue for further processing.</li>
-            </ol>
-
-            <h3>(C) Edge Flipping (flipEdgesForRegularDegree)</h3>
-            <p><strong>Purpose:</strong> Improves vertex connectivity by flipping edges to achieve more regular degree (6 neighbors for most vertices).</p>
-            <p><em>Note:</em> While not shown in the provided code, edge flipping would typically use <span class="highlight">flipEdge(e)</span> from HalfEdgeMesh and would similarly need to handle velocity updates for affected vertices.</p>
-
-            <h2>3. Full Remeshing Pipeline (regularizeMesh)</h2>
-            <p><strong>Purpose:</strong> Combines splitting, collapsing, and smoothing for stable mesh evolution.</p>
-
-            <h3>Algorithm:</h3>
-            <ol>
-                <li><strong>Compute Mean Edge Length</strong> (<span class="highlight">calculateMeanEdgeLength()</span>).</li>
-                
-                <li><strong>Iterative Remeshing</strong> (<span class="highlight">outerIterations = 5</span>):
-                    <ul>
-                        <li>Collapse Short Edges (<span class="highlight">< 4L/5</span>)</li>
-                        <li>Split Long Edges (<span class="highlight">> 4L/3</span>)</li>
-                        <li>Tangential Smoothing (<span class="highlight">5 steps</span>) to relax vertex positions</li>
-                    </ul>
-                </li>
-                
-                <li><strong>Update Topology</strong> (<span class="highlight">topologyUpdated = true</span>)</li>
-            </ol>
-
-            <h2>Key Benefits and Results</h2>
-            <ul>
-                <li><strong>Prevents Pole Divergence:</strong> Tangential smoothing avoids normal displacement, keeping curvature stable.</li>
-                <li><strong>Maintains Uniformity:</strong> Splitting/collapsing ensures edges stay close to the target length (L).</li>
-                <li><strong>Preserves Physics:</strong> Mass-weighted velocity updates maintain energy conservation.</li>
-            </ul>
-
-            <h2>Summary</h2>
-            <p>The remeshing system effectively maintains mesh quality during dynamic simulations by combining three key operations: tangential smoothing for stable deformation, edge splitting/collapsing for uniform triangle distribution, and proper velocity interpolation to preserve physical properties. By using mass-weighted velocity updates during topological changes (via <span class="highlight">splitEdge</span> and <span class="highlight">collapseEdge</span> from HalfEdgeMesh), the implementation ensures momentum conservation while preventing the artificial energy introduction that could lead to instability. The result is a robust system that prevents mesh degeneration (like pole divergence) while maintaining physically plausible motion - no more crashing from degenerate geometry or unstable simulations. The careful balance between geometric operations (splitting/collapsing) and physical quantities (velocity/mass interpolation) creates a stable feedback loop where the mesh quality supports accurate physics, and the physics informs appropriate remeshing.</p>
-
+        
 
 
        <h3>2. Edge Operations</h3>
 
-           
-
-
+             <p>
+            To maintain a uniform and well-conditioned mesh for bubble simulation, 
+            we perform three key edge operations: 
+            <em>splitting long edges</em>, <em>collapsing short edges</em>, and <em>flipping 
+                edges for regularity</em>.  
+            These operations work together to prevent extreme variations in edge length, reduce degeneracies, and 
+            improve the overall mesh structure,.
+             </p>
+                <h4> Edge Splitting </h4>
+            
 
 
         <section class="card">
