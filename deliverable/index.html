@@ -154,10 +154,10 @@
             The above calculations assume that the Fresnel coefficients correspond only to phase shifts of 0° or 180°.
             However, this simplification is insufficient for accurately simulating light behavior in thin films. To capture the true interference effects,
             we must also account for the continuous phase change introduced by the optical path difference within the film. This is represented by the complex
-            factor \(e^{iδ}\), where δ is the phase thickness determined by the film’s refractive index, thickness, and the wavelength of light.
+            factor \(e^{iδ}\), where \(\delta\) is the phase thickness determined by the film’s refractive index, thickness, and the wavelength of light.
         </p>
         <div class="eq">
-            \[δ = (2π · n_f · d · cos θ_f) / λ\]
+            \[\delta = (2\pi · n_f · d · cos θ_f) / \lambda\]
         </div>
         <p>
             Using the computed Fresnel coefficients, we perform an Airy summation to account for the infinite series of reflections within the
@@ -211,8 +211,13 @@
         </div>
 
         <h2> Skybox </h2>
-        <p>To enhance visual richness and avoid a monotonous background, we implemented a skybox so that bubbles could reflect and refract more varied and realistic colors instead of appearing in a blank scene. We loaded six images, each mapped to one face of the cube, forming a complete surrounding environment. In the view matrix, we set \(v(0,3) = v(1,3) = v(2,3) = 0\) to remove translation while preserving rotation, ensuring that the cube remains stationary relative to the camera and appears infinitely distant.</p>
-        <p>For path tracing, we created a <code>PathtracingSkybox::sample</code> method that takes a normalized direction vector as input, determines which cube face this direction intersects, converts it to 2D texture coordinates, and returns the corresponding pixel color from that face. This method enabling the path tracer to return accurate background colors when rays miss all geometry.</p>
+        <p>To enhance visual richness and avoid a monotonous background, we implemented a skybox so that bubbles could reflect and refract more varied 
+        and realistic colors instead of appearing in a blank scene. We loaded six images, each mapped to one face of the cube, forming a complete 
+        surrounding environment. In the view matrix, we set \(v(0,3) = v(1,3) = v(2,3) = 0\) to remove translation while preserving rotation, ensuring 
+        that the cube remains stationary relative to the camera and appears infinitely distant.</p>
+        <p>For path tracing, we created a <code>PathtracingSkybox::sample</code> method that takes a normalized direction vector as input, determines 
+        which cube face this direction intersects, converts it to 2D texture coordinates, and returns the corresponding pixel color from that face. 
+        This method enabling the path tracer to return accurate background colors when rays miss all geometry.</p>
 
         <div style="display: flex; flex-direction: column; align-items: center;">
 
