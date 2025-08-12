@@ -80,7 +80,7 @@ namespace CGL {
         bool collectIncidentEdges(VertexIter v, EdgeIter collapsingEdge, std::vector<EdgeIter>& out);
         //void flipEdgesForRegularDegree(); 
         //bool shouldFlipEdge(EdgeIter e) const; 
-        void tangentialSmoothing(double weight); 
+        void tangentialSmoothing(double weight, double dt); 
         void computeCentroids();
         double sinceLastUpdate;
 

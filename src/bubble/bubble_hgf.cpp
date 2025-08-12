@@ -64,8 +64,8 @@ namespace CGL {
 
         // TODO:
         // maybe use tthe isotropic remeshing algorithm?
-        const int outerIterations = 5;
-        const int smoothingSteps = 10;
+        const int outerIterations = 10;
+        const int smoothingSteps = 5;
         const double maxEdgeRatio = 4.0 / 3.0;
         const double minEdgeRatio = 4.0 / 5.0;
         double meanEdgeLength = calculateMeanEdgeLength();
@@ -80,7 +80,7 @@ namespace CGL {
                 //flipEdgesForDegree();
 
                 for (int j = 0; j < smoothingSteps; j++) {
-                    tangentialSmoothing(0.2);
+                    tangentialSmoothing(0.8, 0.1);
                 }
 
                 cout << "next round of outerIteration" << endl;
@@ -105,9 +105,14 @@ namespace CGL {
         }
     }
 
-    void BubbleHGF::tangentialSmoothing(double weight) {
+    void BubbleHGF::tangentialSmoothing(double weight, double dt = 1.0 / 30.0) {
 
         computeCentroids();
+        std::unordered_map<Vertex*, size_t> vidx;
+        size_t idx = 0;
+        for (auto v = verticesBegin(); v != verticesEnd(); ++v, ++idx) {
+            vidx[&(*v)] = idx;
+        }
 
         for (VertexIter v = verticesBegin(); v != verticesEnd(); v++) {
             /*if (v->isBoundary()) {
@@ -116,14 +121,20 @@ namespace CGL {
 
             double adaptiveWeight = weight * (6.0 / v->degree());
             adaptiveWeight = clamp(adaptiveWeight, 0.01, 0.5);
-
-            Vector3D update = v->newPosition - v->position;
+            Vector3D oldPos = v->position;
+            Vector3D update = v->newPosition - oldPos;
             v->computeNormal();
             Vector3D normal = v->normal; 
             double normalComponent = dot(update, normal);
             Vector3D tangentialUpdate = update - normal * normalComponent;
 
             v->position += tangentialUpdate * adaptiveWeight;
+
+            Vector3D positionChange = v->position - oldPos;
+
+            size_t vertex_idx = vidx[&(*v)];
+            V.row(vertex_idx) = Eigen::RowVector3d(positionChange.x, positionChange.y, positionChange.z)/dt;
+			V.row(vertex_idx) *= 0.999; // dampen the velocity a bit
         }
     }
 
@@ -296,8 +307,8 @@ namespace CGL {
             double v1mass = vertexWeight(v1);
 
 
-            vertexVelocity.erase(v0);
-            vertexVelocity.erase(v1);
+            //vertexVelocity.erase(v0);
+            //vertexVelocity.erase(v1);
             // Collapse edge
 #ifdef __DEBUG_OUTPUT__
             cout << "Collapsing edge:" << "\n";
