@@ -36,7 +36,7 @@
         <h2>Setup of the Environement</h2>
 
         <h2>Forward Kinematics and Velocity Update</h2>
-            <div style="text-align: center;">
+            
             <p>To simluate the film movement over time, we implement a forward kinematics 
                 step that integrates vertex positions from their velocities and updates 
                 the velocities from forces derived from a cotangent-weighted Laplacian operator. 
@@ -50,18 +50,16 @@
             <p>We compute a diagonal inverse mass matrix \( \mathbf{M}^{-1} \) 
                 using barycentric area distribution. For a triangular face with 
                 vertices <code>i,j,k</code>, the area contribution is</p>
-            <div>
+            <div class="eq">
                 \[ \text{share} = \big\|(\mathbf{p}_j - \mathbf{p}_i) \times (\mathbf{p}_k - \mathbf{p}_i)\big\|. \]
             </div>
             <p> Each vertex's mass is computed from the sum of one-third of the area of its incident triangles.The inverse mass matrix is computed as:</p>
 
-            <p>
+            <div class="eq">
+                \[ M_{ii}^{-1} = \frac{6}{\max(\text{mass}_i, \varepsilon)} \]
+             </div>
                 
-                <br>
-                \( M_{ii}^{-1} = \frac{6}{\max(\text{mass}_i, \varepsilon)} \)
-                <br>
-                
-                </p>
+        
                 <p>
                 where \( \text{mass}_i \) is the sum of the areas of adjacent triangles.
                 The factor of 6 accounts for barycentric weighting:
@@ -69,8 +67,21 @@
                 and the area computation does not account the usual \( \frac{1}{2} \) factor,
                 hence resulting in an overestimation by a factor of 6.
                 </p>
+
             <h3>Laplacian Matrix</h3>
-            
+            <p>The Laplacian \( \mathbf{L} \) computes smoothing forces using cotangent weights for each edge.</p>
+            <p>
+            Cotangent weight for edge \((i, j)\) calculation where \(\alpha\) and \(\beta\) are the angles opposite the edge in the two adjacent triangles.:
+            <div class="eq">
+            \[ w_{ij} = \frac{1}{2} \left( \cot \alpha + \cot \beta \right)\]
+            </div>
+            </p>
+           
+            <p>Individual weights then are inserted symmetrically and diagonals ensure row sums are zero:</p>
+            <div class="eq">
+                \[ L_{ii} = -\sum_{j \in \mathcal{N}(i)} w_{ij}. \]
+            </div>
+
             <h3>Velocity and Position Update</h3>
             <p>We compute accelerations from the Laplacian acting on the position matrix \( \mathbf{X} \) and integrate velocities explicitly. Using timestep \( \Delta t \):</p>
             <div>
@@ -82,21 +93,12 @@
             <div>
                 \[ \mathbf{X}(t + \Delta t) = \mathbf{X}(t) + \Delta t \, \mathbf{V}(t + \Delta t) \]
             </div>
+            <p>In this explicit Euler process, velocity is updated based on the current acceleration, and the 
+                position is then integrated forward using the updated velocity.</p>
 
-            <h3>Reference Implementation Snippet</h3>
-            
 
-            <h2>Velocity Treatment During Topology Changes</h2>
 
-            <h3>Edge Collapse</h3>
-            
-
-            <h3>Edge Split</h3>
-            
-
-            <h3>Implementation Notes</h3>
-           
-        </div>
+          
         <h2>Remshing/Retopology</h2>
 
         <h2>Bubble BSDF</h2>
