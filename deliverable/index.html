@@ -33,6 +33,72 @@
         <h2>Overview</h2>
         In this project, we aim to create a realistic soap bubble simulation, capturing their dynamic motion under surface tension and rendering their iconic iridescent, rainbow-like appearance with ray tracing based techniques.
 
+        <h2>Setup of the Environement</h2>
+
+        <h2>Forward Kinematics and Velocity Update</h2>
+            <div style="text-align: center;">
+            <p>To simluate the film movement over time, we implement a forward kinematics 
+                step that integrates vertex positions from their velocities and updates 
+                the velocities from forces derived from a cotangent-weighted Laplacian operator. 
+                It require building a mass matrix  \( M \), a Laplacian matrix  \( L \), and a position matrix  \( X \), then integrates
+                 forward in time using a semi-implicit scheme.
+
+                Let \( n \) denote the number of vertices. Each vertex <code>i</code> has position \( \mathbf{p}_i \) 
+                and velocity \( \mathbf{v}_i \).</p>
+
+            <h3>Mass Matrix</h3>
+            <p>We compute a diagonal inverse mass matrix \( \mathbf{M}^{-1} \) 
+                using barycentric area distribution. For a triangular face with 
+                vertices <code>i,j,k</code>, the area contribution is</p>
+            <div>
+                \[ \text{share} = \big\|(\mathbf{p}_j - \mathbf{p}_i) \times (\mathbf{p}_k - \mathbf{p}_i)\big\|. \]
+            </div>
+            <p> Each vertex's mass is computed from the sum of one-third of the area of its incident triangles.The inverse mass matrix is computed as:</p>
+
+            <p>
+                
+                <br>
+                \( M_{ii}^{-1} = \frac{6}{\max(\text{mass}_i, \varepsilon)} \)
+                <br>
+                
+                </p>
+                <p>
+                where \( \text{mass}_i \) is the sum of the areas of adjacent triangles.
+                The factor of 6 accounts for barycentric weighting:
+                each triangle contributes \( \frac{1}{3} \) of its area to each vertex,
+                and the area computation does not account the usual \( \frac{1}{2} \) factor,
+                hence resulting in an overestimation by a factor of 6.
+                </p>
+            <h3>Laplacian Matrix</h3>
+            
+            <h3>Velocity and Position Update</h3>
+            <p>We compute accelerations from the Laplacian acting on the position matrix \( \mathbf{X} \) and integrate velocities explicitly. Using timestep \( \Delta t \):</p>
+            <div>
+                \[ \mathbf{a} = \mathbf{M}^{-1} \mathbf{L} \mathbf{X} \]
+            </div>
+            <div>
+                \[ \mathbf{V}(t + \Delta t) = \mathbf{V}(t) + \Delta t \, \mathbf{a} \]
+            </div>
+            <div>
+                \[ \mathbf{X}(t + \Delta t) = \mathbf{X}(t) + \Delta t \, \mathbf{V}(t + \Delta t) \]
+            </div>
+
+            <h3>Reference Implementation Snippet</h3>
+            
+
+            <h2>Velocity Treatment During Topology Changes</h2>
+
+            <h3>Edge Collapse</h3>
+            
+
+            <h3>Edge Split</h3>
+            
+
+            <h3>Implementation Notes</h3>
+           
+        </div>
+        <h2>Remshing/Retopology</h2>
+
         <h2>Bubble BSDF</h2>
         <p class="muted">
             In rendering the bubbles for this project, we extended the HW3 code to incorporate physically accurate thin-film transmission and reflection. Our first step was to implement a helper function <code>thin_film_RT</code> to compute the intensities of light that are reflected and refracted by the bubble’s surface. We specified the film’s refractive index 𝑛<sub>𝑓</sub>, its thickness 𝑑, and the refractive index of air 𝑛<sub>0</sub>. Using these parameters, along with the light’s wavelength λ and incident angle 𝜃<sub>0</sub>, we first applied Snell’s law to calculate the film angle 𝜃<sub>𝑓</sub>.
@@ -145,6 +211,11 @@
                     </td>
             </table>
         </div>
+
+        <h2>Conclusion $ Future Work</h2>
+        <h2>Reference</h2>
+
+
     </div>
 </body>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
