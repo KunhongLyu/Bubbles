@@ -1,12 +1,18 @@
 #include "halfEdgeMesh.h"
 
+
 namespace CGL {
+    struct Vertex;  // forward declaration
+    struct Face;
+    struct Edge;
 
     bool Halfedge::isBoundary(void)
         // returns true if and only if this halfedge is on the boundary
     {
         return face()->isBoundary();
     }
+
+
 
     bool Edge::isBoundary(void) { return halfedge()->face()->isBoundary(); }
 
@@ -345,95 +351,100 @@ namespace CGL {
     }
 
     VertexIter HalfedgeMesh::collapseEdge(EdgeIter e) {
-        // Get the halfedges of the edge
-        HalfedgeIter h = e->halfedge();
-        HalfedgeIter h_twin = h->twin();
+        HalfedgeIter h01 = e->halfedge();
+        HalfedgeIter h10 = h01->twin();
 
-        // Get the vertices to collapse
-        VertexIter v0 = h->vertex();
-        VertexIter v1 = h_twin->vertex();
+        VertexIter v0 = h01->vertex();
+        VertexIter v1 = h10->vertex();
 
-        // Check if collapse would create non-manifold geometry
-        if (v0->isBoundary() && v1->isBoundary() && !e->isBoundary()) {
-            return verticesEnd(); // Can't collapse this edge
-        }
+        v0->position = (v0->position + v1->position) / 2.0;
 
-        // Check if either vertex is degree 2 (would create a duplicate face)
-        if (v0->degree() <= 2 || v1->degree() <= 2) {
-            return verticesEnd();
-        }
-
-        // Get surrounding elements
-        HalfedgeIter h0_next = h->next();
-        HalfedgeIter h0_prev = h0_next->next();
-        HalfedgeIter h1_next = h_twin->next();
-        HalfedgeIter h1_prev = h1_next->next();
-
-        // Get the faces (may be boundary)
-        FaceIter f0 = h->face();
-        FaceIter f1 = h_twin->face();
-
-        // Create new vertex at midpoint (or you could choose one of the endpoints)
-        VertexIter new_v = newVertex();
-        new_v->position = (v0->position + v1->position) / 2.0;
-        new_v->isNew = false;
-
-        // Reconnect halfedges to new vertex
-        HalfedgeIter h_iter = h_twin;
+        HalfedgeIter h_iter = h10;
+        size_t safety = 0;
         do {
-            h_iter->vertex() = new_v;
+            h_iter->vertex() = v0;
             h_iter = h_iter->twin()->next();
-        } while (h_iter != h_twin);
+        } while (h_iter != h10);
 
-        h_iter = h;
-        do {
-            h_iter->vertex() = new_v;
-            h_iter = h_iter->twin()->next();
-        } while (h_iter != h);
+        // opposite of h01 side is a
+        // opposite of h10 side is b
 
-   
-        HalfedgeIter h0_next_twin = h0_next->twin();
-        HalfedgeIter h1_next_twin = h1_next->twin();
-        HalfedgeIter h0_prev_twin = h0_prev->twin();
-        HalfedgeIter h1_prev_twin = h1_prev->twin();
+        HalfedgeIter h1a = h01->next();
+        HalfedgeIter ha0 = h1a->next();
+        HalfedgeIter h0b = h10->next();
+        HalfedgeIter hb1 = h0b->next();
 
-		EdgeIter h0_n_edge = h0_next->edge();
-		EdgeIter h1_n_edge = h1_next->edge();
-		EdgeIter h0_p_edge = h0_prev->edge();
-		EdgeIter h1_p_edge = h1_prev->edge();
+        VertexIter va = ha0->vertex();
+        VertexIter vb = hb1->vertex();
 
-		h0_next_twin->twin() = h0_prev_twin;
-		h1_next_twin->twin() = h1_prev_twin;
-		h0_prev_twin->twin() = h0_next_twin;
-		h1_prev_twin->twin() = h1_next_twin;
+        EdgeIter ea1 = h1a->edge();
+        EdgeIter ea0 = ha0->edge();
+        EdgeIter eb0 = h0b->edge();
+        EdgeIter eb1 = hb1->edge();
 
-		h0_n_edge->halfedge() = h0_next_twin;
-		h1_n_edge->halfedge() = h1_next_twin;
+        h1a->twin()->twin() = ha0->twin();
+        ha0->twin()->twin() = h1a->twin();
+        ha0->twin()->edge() = ea1;
+
+        h0b->twin()->twin() = hb1->twin();
+        hb1->twin()->twin() = h0b->twin();
+        h0b->twin()->edge() = eb1;
+
+        ea1->halfedge() = h1a->twin();
+        eb1->halfedge() = hb1->twin();
+
+        v0->halfedge() = hb1->twin();
+        va->halfedge() = h1a->twin();
+        vb->halfedge() = h0b->twin();
 
 
-        // Set new vertex's halfedge to one pointing away from it
-        new_v->halfedge() = h0_next->twin()->next();
-
-        // Delete elements being collapsed
+        // First delete halfedges
+        deleteFace(h10->face());
+        deleteFace(h01->face());
+        deleteEdge(ea0);
+        deleteEdge(eb0);
         deleteEdge(e);
-        deleteEdge(h1_p_edge);
-        deleteEdge(h0_p_edge); 
-		deleteHalfedge(h);
-		deleteHalfedge(h_twin);
-		deleteHalfedge(h0_next);
-		deleteHalfedge(h0_prev);
-		deleteHalfedge(h1_next);
-		deleteHalfedge(h1_prev);
+        HalfedgeIter edgeToDelete[] = { h01, h10, h1a, ha0, h0b, hb1 };
+        for (const auto &h : edgeToDelete) {
+            deleteHalfedge(h);
+        }
 
-		deleteVertex(v0);
-		deleteVertex(v1);
-
-        if (!f0->isBoundary()) deleteFace(f0);
-        if (!f1->isBoundary()) deleteFace(f1);
-
-        return new_v;
+        deleteVertex(v1);
+        return v0;
     }
 
+
+    double HalfedgeMesh::vertexWeight(VertexIter v) const
+        // This method returns the weight of the vertex, which is defined as the sum of the
+        // cotangent weights of all incident faces.  The cotangent weight is defined as
+        // the cotangent of the angle opposite to the edge connecting this vertex to its
+        // neighbor.
+    {
+        HalfedgeIter start = v->halfedge();
+        HalfedgeIter h = start;
+        double total = 0.0;
+        do
+        {
+            FaceIter f = h->face();
+            HalfedgeIter h0 = f->halfedge();
+            HalfedgeIter h1 = h0->next();
+            HalfedgeIter h2 = h1->next();
+
+            const Vector3D p0 = h0->vertex()->position;
+            const Vector3D p1 = h1->vertex()->position;
+            const Vector3D p2 = h2->vertex()->position;
+
+            // need to divide by 2
+            const double area = cross(p1 - p0, p2 - p0).norm();
+
+            // need to divide by 3
+            const double share = area;
+            total += share;
+            h = h->twin()->next();
+        } while (h != start);
+        // hence divide by 6
+        return total / 6;
+    }
 
     void HalfedgeMesh::build(const vector<vector<Index> > &polygons,
         const vector<Vector3D> &vertexPositions,
@@ -873,4 +884,31 @@ namespace CGL {
 
     HalfedgeMesh::HalfedgeMesh(const HalfedgeMesh &mesh) { *this = mesh; }
 
+    bool Halfedge::isValid() const {
+#ifdef __NOVALID__
+        return true;
+#endif
+        // Basic null checks
+        if (_vertex == VertexIter() || _edge == EdgeIter() || _face == FaceIter())
+            return false;
+        if (_next == HalfedgeIter() || _twin == HalfedgeIter())
+            return false;
+
+        // Vertex must point to a valid halfedge (no recursion)
+        if (_vertex->halfedge() == HalfedgeIter())
+            return false;
+
+        // Edge must point to one of its halfedges
+        Edge* edgePtr = &(*_edge);
+        if (&(*edgePtr->halfedge()) != this &&
+            &(*edgePtr->halfedge()) != &(*_twin))
+            return false;
+
+        // Face must point to one of its halfedges
+        Face* facePtr = &(*_face);
+        if (facePtr->halfedge() == HalfedgeIter())
+            return false;
+
+        return true;
+    }
 }  // namespace CGL

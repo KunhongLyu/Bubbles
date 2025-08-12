@@ -63,25 +63,26 @@ namespace CGL {
         HGFPathtracerCapture *pathtracerCapture;
 
         Eigen::MatrixXd V;
+        Eigen::VectorXd Minv;
+		Eigen::MatrixXd M;
 
 
         double calculateVolume() const;
         void forwardKinesmatics(double dt);
         void correctVolume();
-        void regularizeMesh();
-
+        void regularizeMesh(bool full);
+         
 
         //remesh helper 
         double calculateMeanEdgeLength() const;
         void splitLongEdges(double threshold); 
         void collapseShortEdges(double threshold);
-        void flipEdgesForRegularDegree(); 
-        bool shouldFlipEdge(EdgeIter e) const; 
-        void tangentialSmoothing(double weight); 
-
-		void updateMeshBuffers();
+        bool collectIncidentEdges(VertexIter v, EdgeIter collapsingEdge, std::vector<EdgeIter>& out);
+        //void flipEdgesForRegularDegree(); 
+        //bool shouldFlipEdge(EdgeIter e) const; 
+        void tangentialSmoothing(double weight, double dt); 
+        void computeCentroids();
         double sinceLastUpdate;
-        
 
         double volume; // volume of the bubble, kept constant
 

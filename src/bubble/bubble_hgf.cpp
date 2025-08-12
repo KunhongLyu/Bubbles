@@ -5,6 +5,10 @@
 #include <unordered_map>
 #include <chrono>
 #include <algorithm>
+#include <queue>
+
+#include <unordered_set>
+
 
 namespace CGL {
 
@@ -50,37 +54,91 @@ namespace CGL {
 
         sinceLastUpdate += dt;
 
-        if (sinceLastUpdate > 0.1) {
-            regularizeMesh();
+        if (sinceLastUpdate > 0.03) {
+            regularizeMesh(true);
             sinceLastUpdate = 0.0;
         }
     }
 
-    void BubbleHGF::regularizeMesh() {
+    void BubbleHGF::regularizeMesh(bool full) {
 
         // TODO:
         // maybe use tthe isotropic remeshing algorithm?
-        const int outerIterations = 5;
-        const int smoothingSteps = 10;
+        const int outerIterations = 10;
+        const int smoothingSteps = 5;
         const double maxEdgeRatio = 4.0 / 3.0;
         const double minEdgeRatio = 4.0 / 5.0;
         double meanEdgeLength = calculateMeanEdgeLength();
+         
+        if (full) {
+            for (int i = 0; i < outerIterations; i++) {
+                collapseShortEdges(meanEdgeLength * minEdgeRatio);
+
+                splitLongEdges(meanEdgeLength * maxEdgeRatio);
 
 
-        for (int i = 0; i < outerIterations; i++) {
-            splitLongEdges(meanEdgeLength * maxEdgeRatio);
-            //collapseShortEdges(meanEdgeLength * minEdgeRatio);
-            /*flipEdgesForDegree();
+                //flipEdgesForDegree();
 
-            for (int j = 0; j < smoothingSteps; j++) {
-                tangentialSmoothing(0.2); 
+                for (int j = 0; j < smoothingSteps; j++) {
+                    tangentialSmoothing(0.8, 0.1);
+                }
+
+                cout << "next round of outerIteration" << endl;
+                meanEdgeLength = calculateMeanEdgeLength();
             }
-            */
-            meanEdgeLength = calculateMeanEdgeLength();
+        }
+        else {
+            collapseShortEdges(meanEdgeLength * minEdgeRatio);
         }
         this->topologyUpdated = true;
    
     }
+
+
+
+
+    void BubbleHGF::computeCentroids() {
+        for (VertexIter v = verticesBegin(); v != verticesEnd(); v++) {
+            v->computeCentroid();
+            v->newPosition = v->centroid;
+            
+        }
+    }
+
+    void BubbleHGF::tangentialSmoothing(double weight, double dt = 1.0 / 30.0) {
+
+        computeCentroids();
+        std::unordered_map<Vertex*, size_t> vidx;
+        size_t idx = 0;
+        for (auto v = verticesBegin(); v != verticesEnd(); ++v, ++idx) {
+            vidx[&(*v)] = idx;
+        }
+
+        for (VertexIter v = verticesBegin(); v != verticesEnd(); v++) {
+            /*if (v->isBoundary()) {
+                continue; 
+            }*/
+
+            double adaptiveWeight = weight * (6.0 / v->degree());
+            adaptiveWeight = clamp(adaptiveWeight, 0.01, 0.5);
+            Vector3D oldPos = v->position;
+            Vector3D update = v->newPosition - oldPos;
+            v->computeNormal();
+            Vector3D normal = v->normal; 
+            double normalComponent = dot(update, normal);
+            Vector3D tangentialUpdate = update - normal * normalComponent;
+
+            v->position += tangentialUpdate * adaptiveWeight;
+
+            Vector3D positionChange = v->position - oldPos;
+
+            size_t vertex_idx = vidx[&(*v)];
+            V.row(vertex_idx) = Eigen::RowVector3d(positionChange.x, positionChange.y, positionChange.z)/dt;
+			V.row(vertex_idx) *= 0.999; // dampen the velocity a bit
+        }
+    }
+
+
 
 
 
@@ -98,91 +156,274 @@ namespace CGL {
 
 
     void BubbleHGF::splitLongEdges(double threshold) {
-       
+        const size_t current_vertex_count = nVertices();
         std::unordered_map<Vertex*, size_t> vidx;
-        size_t current_vertex_count = nVertices();
         vidx.reserve(current_vertex_count * 2);
-        std::cout << "vidx size: edges " << current_vertex_count << std::endl;
 
         size_t idx = 0;
         for (auto v = verticesBegin(); v != verticesEnd(); ++v, ++idx) {
             vidx[&(*v)] = idx;
         }
-        
-    
+       
+        //store edges to split 
         vector<EdgeIter> edgesToSplit;
-
         for (EdgeIter e = edgesBegin(); e != edgesEnd(); ++e) {
             if (e->length() > threshold) {
                 edgesToSplit.push_back(e);
             }
         }
+
         std::cout << "Found " << edgesToSplit.size() << " edges to split" << std::endl;
-        std::cout << "Before splitting: vertices.size() = " << vertices.size()
-            << ", V.rows() = " << V.rows()
-            << ", Minv.size() = " << Minv.size() << std::endl;
-
+        const size_t initial_vertex_count = nVertices();
+        V.conservativeResize(initial_vertex_count + edgesToSplit.size(), 3);
+        Minv.conservativeResize(initial_vertex_count + edgesToSplit.size());
+        
+        int i = 0;
         for (EdgeIter e : edgesToSplit) {
-            Vertex* raw_v0 = &(*e->halfedge()->vertex());
-            Vertex* raw_v1 = &(*e->halfedge()->twin()->vertex());
-
-            // Verify vertices exist in map
-            if (vidx.count(raw_v0) == 0 || vidx.count(raw_v1) == 0) {
-                throw std::runtime_error("Vertex not found in index map");
-            }
-            size_t i0 = vidx[raw_v0];
-            size_t i1 = vidx[raw_v1];
-            if (Minv.size() != vertices.size()) {
-                std::cout << "Resizing Minv to match vertices\n";
-                Minv.resize(vertices.size());
-                Minv.setConstant(1.0); 
-            }
-
-            const double epsilon = 1e-10;
-            double m0 = 1.0 / std::max(Minv(i0), epsilon);
-
-            double m1 = 1.0 / std::max(Minv(i1), epsilon);
+            Vertex* v0 = &(*e->halfedge()->vertex());
+            Vertex* v1 = &(*e->halfedge()->twin()->vertex());
+         
+            size_t i0 = vidx[v0];
+            size_t i1 = vidx[v1];
+         
+            double m0 = 1.0 / Minv(i0);
+            double m1 = 1.0 / Minv(i1);
 
             VertexIter newVert = splitEdge(e);
-            newVert->position = 0.5 * (raw_v0->position + raw_v1->position);
-            newVert->computeNormal();
+            const size_t new_idx = initial_vertex_count + i;
 
-            size_t new_idx = V.rows();
-            V.conservativeResize(new_idx + 1, 3);
-            Minv.conservativeResize(new_idx + 1);
+            newVert->position = 0.5 * (v0->position + v1->position);
+            newVert->computeNormal();
 
             // interpolate velocity
             V.row(new_idx) = (m0 * V.row(i0) + m1 * V.row(i1)) / (m0 + m1);
             Minv(new_idx) = 1.0 / (m0 + m1);
 
             vidx[&(*newVert)] = new_idx;
+            i++; 
         }
-        std::cout << "After splitting: vertices.size() = " << vertices.size()
+        std::cout << "After splitting: v.size() = " << vertices.size()
             << ", V.rows() = " << V.rows()
             << ", Minv.size() = " << Minv.size() << std::endl;
 
     }
 
-    void BubbleHGF::collapseShortEdges(double threshold) {
-        vector<EdgeIter> edgesToCollapse;
 
-        for (EdgeIter e = edgesBegin(); e != edgesEnd(); ++e) {
-            if (e->length() < threshold && !e->isBoundary()) {
-                edgesToCollapse.push_back(e);
-            }
+
+    struct EdgeLen {
+        EdgeIter e;
+        double len;
+
+        bool operator<(const EdgeLen& other) const {
+            if (&(*e) == &(*other.e))
+                return false;
+            if (len != other.len)
+                return len < other.len;
+            return &(*e) < &(*other.e);
         }
-        std::cout << "Found " << edgesToCollapse.size() << " edges to collapse" << std::endl;
+    };
+    struct VertexIterHash {
+        size_t operator()(const VertexIter &it) const noexcept {
+            return std::hash<const Vertex *>()(&*it);
+        }
+    };
 
-        for (EdgeIter e : edgesToCollapse) {
-            Vector3D avgPos = 0.5 * (e->halfedge()->vertex()->position +
-                e->halfedge()->twin()->vertex()->position);
+    struct VertexIterEq {
+        bool operator()(const VertexIter &a, const VertexIter &b) const noexcept {
+            return &*a == &*b;
+        }
+    };
 
-            VertexIter newVert = collapseEdge(e); 
-              newVert->position = avgPos;
-              newVert->computeNormal();
+//#define __DEBUG_OUTPUT__
 
+    void BubbleHGF::collapseShortEdges(double threshold) {
+        Minv.resize(nVertices());
+        Minv.setConstant(1.0);
+
+        std::unordered_map<VertexIter, Vector3D, VertexIterHash, VertexIterEq> vertexVelocity;
+
+#ifdef _DEBUG
+        double v0mass;
+        double v1mass;
+        Vector3D velocity;
+#endif
+        int idx = 0;
+        for (auto v = vertices.begin(); v != vertices.end(); ++v, ++idx) {
+            vertexVelocity[v] = Vector3D(V(idx, 0), V(idx, 1), V(idx, 2));
+        }
+
+
+        std::set<EdgeLen> edgeSet;
+        for (EdgeIter e = edgesBegin(); e != edgesEnd(); ++e) {
+            double length = e->length();
+            if (length >= threshold) continue;
+            edgeSet.insert({ e, length });
+        }
+
+        size_t collapsesThisFrame = 0;
+        size_t maxCollapsesPerFrame = 300;
+
+        while (!edgeSet.empty() && collapsesThisFrame < maxCollapsesPerFrame) {
+            EdgeLen shortest = *edgeSet.begin();
+            edgeSet.erase(edgeSet.begin());
+
+            EdgeIter e = shortest.e;
+
+            HalfedgeIter h = e->halfedge();
+            HalfedgeIter hTwin = h->twin();
+
+            VertexIter v0 = h->vertex();
+            VertexIter v1 = hTwin->vertex();
+#ifdef __DEBUG_OUTPUT__
+            cout << "before for loop:" << "\n";
+#endif
+
+            std::vector<EdgeIter> affectedEdges;
+            std::vector<EdgeIter> tempEdgesv0;
+            std::vector<EdgeIter> tempEdgesv1;
+
+            bool v0insert = collectIncidentEdges(v0, e, tempEdgesv0);
+            bool v1insert = collectIncidentEdges(v1, e, tempEdgesv1);
+#ifdef __DEBUG_OUTPUT__
+            std::cout << std::boolalpha << "v0insert" << v0insert << "v1insert" << v1insert << "\n";
+#endif
+            if (v0insert && v1insert) {
+                affectedEdges.insert(affectedEdges.end(), tempEdgesv0.begin(), tempEdgesv0.end());
+                affectedEdges.insert(affectedEdges.end(), tempEdgesv1.begin(), tempEdgesv1.end());
+
+                for (auto &ae : affectedEdges) {
+#ifdef __DEBUG_OUTPUT__
+                    cout << "erase edges:" << "\n";
+#endif
+                    edgeSet.erase({ ae, ae->length() });
+                }
             }
+
+            Vector3D newPos = 0.5 * (v0->position + v1->position);
+            Vector3D v0Vel = vertexVelocity[v0];
+            Vector3D v1Vel = vertexVelocity[v1];
+
+            double v0mass = vertexWeight(v0);
+            double v1mass = vertexWeight(v1);
+
+
+            //vertexVelocity.erase(v0);
+            //vertexVelocity.erase(v1);
+            // Collapse edge
+#ifdef __DEBUG_OUTPUT__
+            cout << "Collapsing edge:" << "\n";
+#endif
+            VertexIter newVert = collapseEdge(e);
+
+            // Update position & normal
+            newVert->position = newPos;
+            // Interpolate velocity
+            Vector3D newVel = (v0mass * v0Vel + v1mass * v1Vel) / (v0mass + v1mass);
+            vertexVelocity[newVert] = newVel;
+#ifdef _DEBUG
+            static volatile double debugMassVelHolder[8] = {
+            v0mass, v1mass,
+            v0Vel.x, v0Vel.y, v0Vel.z,
+            v1Vel.x, v1Vel.y, v1Vel.z
+            };
+#endif
+
+#ifdef __DEBUG_OUTPUT__
+            cout << "new vertex position: " << newVert->position << "\n";
+#endif
+            newVert->computeNormal();
+
+            HalfedgeIter start = newVert->halfedge();
+            HalfedgeIter hv = start;
+
+            do {
+                EdgeIter ae = hv->edge();
+                double len = ae->length();
+#ifdef __DEBUG_OUTPUT__
+                std::cout << "in do while inserting length:" << len << "\n";
+#endif
+                if (len < threshold) {
+                    edgeSet.insert({ ae, len });
+                }
+                hv = hv->twin()->next();
+            } while (hv != start);
+#ifdef __DEBUG_OUTPUT__
+            std::cerr << "Looped through vertices." << std::endl;
+#endif
+
+            collapsesThisFrame++;
+
+
+        }
+
+        std::cout << "Collapses this frame: " << collapsesThisFrame << "\n";
+        std::cout << "New vertex count: " << nVertices() << "\n";
+
+        V = Eigen::MatrixXd::Zero(nVertices(), 3);
+        idx = 0;
+        for (auto &v = vertices.begin(); v != vertices.end(); ++v, ++idx) {
+            Vector3D vel = vertexVelocity[v];
+            V(idx, 0) = vel.x;
+            V(idx, 1) = vel.y;
+            V(idx, 2) = vel.z;
+            // Update Minv
+        }
     }
+
+    bool BubbleHGF::collectIncidentEdges(VertexIter v, EdgeIter collapsingEdge,
+        std::vector<EdgeIter>& out) {
+        std::vector<EdgeIter> temp;
+        bool success = true; // Track overall success
+
+        if (!v->isValid()) return false;
+        HalfedgeIter start = v->halfedge();
+        //if (start == halfedgesEnd() || !start->isValid()) return false;
+
+        HalfedgeIter hv = start;
+        size_t maxSteps = 500;
+        std::unordered_set<void*> seen;
+
+        do {
+            // Early exit if any step fails
+            //if (hv == halfedgesEnd() || !hv->isValid()) {
+            //    success = false;
+            //    break;
+            //}
+
+            //void* key = reinterpret_cast<void*>(&(*hv));
+            //if (seen.count(key)) {
+            //    std::cerr << "Cycle detected in vertex neighborhood\n";
+            //    success = false;
+            //    break;
+            //}
+            //seen.insert(key);
+
+            EdgeIter ae = hv->edge();
+            //if (ae != edgesEnd() && ae->isValid() && &(*ae) != &(*collapsingEdge)) {
+                temp.push_back(ae);
+            //}
+
+            //if (hv->twin() == halfedgesEnd() || !hv->twin()->isValid()) {
+            //    success = false;
+            //    break;
+            //}
+            hv = hv->twin()->next();
+        } while (hv != start && --maxSteps > 0);
+
+        // Final checks
+        if (maxSteps == 0) {
+            std::cerr << "collectIncidentEdges: hit maxSteps for vertex\n";
+            success = false;
+        }
+
+        // Only commit if everything succeeded
+        if (success) {
+            out.insert(out.end(), temp.begin(), temp.end());
+        }
+        return success;
+    }
+
+
 
 
 
@@ -218,17 +459,6 @@ namespace CGL {
     }
 
 
-    struct VertexIterHash {
-        size_t operator()(const VertexIter &it) const noexcept {
-            return std::hash<const Vertex *>()(&*it);
-        }
-    };
-
-    struct VertexIterEq {
-        bool operator()(const VertexIter &a, const VertexIter &b) const noexcept {
-            return &*a == &*b;
-        }
-    };
 
     void BubbleHGF::forwardKinesmatics(double dt) {
 
