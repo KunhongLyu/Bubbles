@@ -116,10 +116,10 @@
         </p>
         <div class="eq">
             \[
-            n_0 · sin θ_0 = n_f · sin θ_f
+            n_0 · \sin \theta_0 = n_f · \sin \theta_f
             \]
             \[
-            cos θ_f = √ [ 1 − (n_0/n_f)^2 · (1 − cos^2θ_0) ]
+            \cos \theta_f = √ [ 1 − (n_0/n_f)^2 · (1 − \cos^2\theta_0) ]
             \]
         </div>
 
@@ -154,10 +154,10 @@
             The above calculations assume that the Fresnel coefficients correspond only to phase shifts of 0° or 180°.
             However, this simplification is insufficient for accurately simulating light behavior in thin films. To capture the true interference effects,
             we must also account for the continuous phase change introduced by the optical path difference within the film. This is represented by the complex
-            factor \(e^{iδ}\), where \(\delta\) is the phase thickness determined by the film’s refractive index, thickness, and the wavelength of light.
+            factor \(e^{i\delta}\), where \(\delta\) is the phase thickness determined by the film’s refractive index, thickness, and the wavelength of light.
         </p>
         <div class="eq">
-            \[\delta = (2\pi · n_f · d · cos θ_f) / \lambda\]
+            \[\delta = (2\pi · n_f · d · \cos \theta_f) / \lambda\]
         </div>
         <p>
             Using the computed Fresnel coefficients, we perform an Airy summation to account for the infinite series of reflections within the
@@ -176,7 +176,7 @@
         </div>
         <p>
             From the total polarization amplitudes of reflection and transmission, we can compute the corresponding light intensities by taking
-            \(R^⋅ = | r_{tot}^⋅ |^2\) and \(T^⋅ = ( n_3cos θ_3 / ( n_0cos θ_0 ) ) · | t_{tot}^⋅ |^2\). Finally, assuming the incident light is
+            \(R^⋅ = | r_{tot}^⋅ |^2\) and \(T^⋅ = ( n_3\cos \theta_3 / ( n_0\cos \theta_0 ) ) · | t_{tot}^⋅ |^2\). Finally, assuming the incident light is
             unpolarized, we obtain the final reflected and transmittedintensities by averaging the results for perpendicular (s) and parallel
             (p) polarizations \(R = ( R^s + R^p )/2, \quad T = ( T^s + T^p )/2\).
         </p>
@@ -190,8 +190,9 @@
                 \(p_R = w_R / (w_T + w_R)\) and use it to determine whether the sample returns reflected or transmitted light.
             </p>
             <ul>
-                <li><b>Reflection geometry</b>: perfect mirror (local reflection). \(f_{refl} = ( R_{rgb} · p_R) / |cos θ_i|\).</li>
-                <li><b>Transmission geometry</b>: for a single-sided thin film, approximate as straight-through (local \(ω_i = −ω_o\)). &nbsp;\(f_{trans} = ( T_{rgb} · p_T ) / |cos θ_i|\).</li>
+                <li><b>Reflection geometry</b>: perfect mirror (local reflection). \(f_{refl} = ( R_{rgb} · p_R) / |\cos \theta_i|\).</li>
+                <li><b>Transmission geometry</b>: for a single-sided thin film, approximate as straight-through (local 
+                \(\omega_i = −\omega_o\)). &nbsp;\(f_{trans} = ( T_{rgb} · p_T ) / |\cos \theta_i|\).</li>
             </ul>
         </section>
 
