@@ -88,19 +88,48 @@
 
         <h3>Velocity and Position Update</h3>
         <p>We compute accelerations from the Laplacian acting on the position matrix \( \mathbf{X} \) and integrate velocities explicitly. Using timestep \( \Delta t \):</p>
-        <div>
+        <div class="eq">
             \[ \mathbf{a} = \mathbf{M}^{-1} \mathbf{L} \mathbf{X} \]
         </div>
-        <div>
+        <div class="eq">
             \[ \mathbf{V}(t + \Delta t) = \mathbf{V}(t) + \Delta t \, \mathbf{a} \]
         </div>
-        <div>
+        <div class="eq">
             \[ \mathbf{X}(t + \Delta t) = \mathbf{X}(t) + \Delta t \, \mathbf{V}(t + \Delta t) \]
         </div>
         <p>
             In this explicit Euler process, velocity is updated based on the current acceleration, and the
             position is then integrated forward using the updated velocity.
         </p>
+
+        <h2>Velocity Treatment During Topology Changes</h2>
+        <p>Topological operations (edge collapse and split) must handle vertex velocities in a way that preserves momentum and avoids introducing spurious energy.</p>
+
+        <h3>Edge Collapse</h3>
+        <p>Given an edge connecting vertices <code>i</code> and <code>j</code>, with masses \( m_i \), \( m_j \) and velocities \( \mathbf{v}_i \), \( \mathbf{v}_j \), collapse yields a new vertex <code>k</code>. The merged position is typically the midpoint:</p>
+        <div class="eq">
+            \[ \mathbf{p}_k = \tfrac{1}{2}(\mathbf{p}_i + \mathbf{p}_j). \]
+        </div>
+        <p>The new vertex velocity is set by mass-weighted averaging to conserve linear momentum:</p>
+        <div class="eq">
+            \[ \mathbf{v}_k = \dfrac{m_i \mathbf{v}_i + m_j \mathbf{v}_j}{m_i + m_j}. \]
+        </div>
+        <p>This ensures the pre-collision momentum equals the post-collapse momentum:</p>
+        <div class="eq">
+            \[ m_i \mathbf{v}_i + m_j \mathbf{v}_j = (m_i + m_j) \mathbf{v}_k. \]
+        </div>
+
+        <h3>Edge Split</h3>
+        <p>When splitting edge <code>(i,j)</code>, a new vertex <code>k</code> is placed along the edge at fraction \( t \) (0 ≤ t ≤ 1):</p>
+        <div class="eq">
+            \[ \mathbf{p}_k = (1-t)\mathbf{p}_i + t\mathbf{p}_j. \]
+        </div>
+        <p>The velocity is interpolated equivalently to maintain field smoothness:</p>
+        <div class="eq">
+            \[ \mathbf{v}_k = (1-t)\mathbf{v}_i + t\mathbf{v}_j. \]
+        </div>
+        <p>For a midpoint split (\( t=0.5 \)): \( \mathbf{v}_k = (\mathbf{v}_i + \mathbf{v}_j)/2 \).</p>
+
 
 
 
