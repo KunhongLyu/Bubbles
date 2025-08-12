@@ -78,7 +78,7 @@ namespace CGL {
         void splitLongEdges(double threshold); 
         void collapseShortEdges(double threshold);
         bool collectIncidentEdges(VertexIter v, EdgeIter collapsingEdge, std::vector<EdgeIter>& out);
-        //void flipEdgesForRegularDegree(); 
+        void flipEdgesForRegularDegree(); 
         //bool shouldFlipEdge(EdgeIter e) const; 
         void tangentialSmoothing(double weight, double dt); 
         void computeCentroids();

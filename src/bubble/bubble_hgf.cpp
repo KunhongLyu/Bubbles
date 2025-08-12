@@ -64,22 +64,30 @@ namespace CGL {
 
         // TODO:
         // maybe use tthe isotropic remeshing algorithm?
-        const int outerIterations = 10;
+        const int outerIterations = 5;
         const int smoothingSteps = 5;
         const double maxEdgeRatio = 4.0 / 3.0;
         const double minEdgeRatio = 4.0 / 5.0;
         double meanEdgeLength = calculateMeanEdgeLength();
-         
+        
+        /*int targetCount = 0;
+        for (auto v = verticesBegin(); v != verticesEnd(); ++v) {
+            targetCount++; 
+        }*/
+
         if (full) {
             for (int i = 0; i < outerIterations; i++) {
                 collapseShortEdges(meanEdgeLength * minEdgeRatio);
 
                 splitLongEdges(meanEdgeLength * maxEdgeRatio);
 
-
-                //flipEdgesForDegree();
+                //if (nVertices() < targetCount * 0.99) {
+                //    splitLongEdges(meanEdgeLength * 1.5); // More splits
+                //}
+               
 
                 for (int j = 0; j < smoothingSteps; j++) {
+                    //flipEdgesForRegularDegree();
                     tangentialSmoothing(0.8, 0.1);
                 }
 
@@ -95,7 +103,63 @@ namespace CGL {
     }
 
 
+    void BubbleHGF::flipEdgesForRegularDegree() {
+        std::unordered_map<Vertex*, size_t> vidx;
+        size_t idx = 0;
+        int flippedCount = 0; 
+        for (auto v = verticesBegin(); v != verticesEnd(); ++v, ++idx) {
+            vidx[&(*v)] = idx;
+        }
 
+        double blend_factor = 0.5;
+
+        std::vector<EdgeIter> edgesToProcess;
+        for (EdgeIter e = edgesBegin(); e != edgesEnd(); ++e) {
+            edgesToProcess.push_back(e);
+        }
+
+        for (EdgeIter e : edgesToProcess) {
+           
+
+            HalfedgeIter h = e->halfedge();
+            HalfedgeIter h_twin = h->twin();
+
+         
+            Vertex* a1 = &(*h->vertex());       
+            Vertex* a2 = &(*h_twin->vertex());  
+            Vertex* b1 = &(*h->next()->next()->vertex());       
+            Vertex* b2 = &(*h_twin->next()->next()->vertex());  
+
+            int a1_degree = a1->degree();
+            int a2_degree = a2->degree();
+            int b1_degree = b1->degree();
+            int b2_degree = b2->degree();
+
+            int current_deviation = abs(a1_degree - 6) + abs(a2_degree - 6) +
+                abs(b1_degree - 6) + abs(b2_degree - 6);
+
+            int flipped_deviation = abs(a1_degree - 1 - 6) + 
+                abs(a2_degree - 1 - 6) +  
+                abs(b1_degree + 1 - 6) + 
+                abs(b2_degree + 1 - 6);   
+
+            if (flipped_deviation < current_deviation) {
+                flippedCount++;
+                size_t a1_idx = vidx[a1];
+                size_t a2_idx = vidx[a2];
+                size_t b1_idx = vidx[b1];
+                size_t b2_idx = vidx[b2];
+
+                EdgeIter newEdge = flipEdge(e);
+
+                V.row(b1_idx) = blend_factor * V.row(b1_idx) + (1 - blend_factor) * (V.row(a1_idx) + V.row(a2_idx)) / 2.0;;
+                V.row(b2_idx) = blend_factor * V.row(b2_idx) + (1 - blend_factor) * (V.row(a1_idx) + V.row(a2_idx)) / 2.0;;
+            }
+                           
+            
+        } 
+        std::cout << "Flipped " << flippedCount << " edges for regular degree optimization" << std::endl;
+    }
 
     void BubbleHGF::computeCentroids() {
         for (VertexIter v = verticesBegin(); v != verticesEnd(); v++) {
@@ -134,7 +198,7 @@ namespace CGL {
 
             size_t vertex_idx = vidx[&(*v)];
             V.row(vertex_idx) = Eigen::RowVector3d(positionChange.x, positionChange.y, positionChange.z)/dt;
-			V.row(vertex_idx) *= 0.999; // dampen the velocity a bit
+			V.row(vertex_idx) *= 0.9999999; // dampen the velocity a bit
         }
     }
 
