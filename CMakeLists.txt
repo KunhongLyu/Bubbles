@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.11)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(ZLIB_DIR "C:/Users/isabe/Vcpkg/vcpkg/installed/x64-windows/share/zlib")
-find_package(ZLIB CONFIG REQUIRED)
+#set(ZLIB_DIR "C:/Users/isabe/Vcpkg/vcpkg/installed/x64-windows/share/zlib")
+#find_package(ZLIB CONFIG REQUIRED)
 set(CMAKE_PREFIX_PATH "C:/Users/isabe/Vcpkg/vcpkg/installed/x64-windows/share")
 project(Bubble)
 

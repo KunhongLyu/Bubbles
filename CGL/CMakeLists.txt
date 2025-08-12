@@ -2,8 +2,9 @@
 # Kayvon Fatahalian, Keenan Crane,
 # Sky Gao, Bryce Summers, Michael Choquette.
 cmake_minimum_required(VERSION 3.11)
-set(ZLIB_DIR "C:/Users/isabe/Vcpkg/vcpkg/installed/x64-windows/share/zlib")
-find_package(ZLIB CONFIG REQUIRED)
+#set(CMAKE_PREFIX_PATH "C:/Users/isabe/Vcpkg/vcpkg/installed/x64-windows")
+#set(ZLIB_DIR "C:/Users/isabe/Vcpkg/vcpkg/installed/x64-windows/share/zlib")
+#find_package(ZLIB REQUIRED)
 set(CMAKE_PREFIX_PATH "C:/Users/isabe/Vcpkg/vcpkg/installed/x64-windows/share")
 project(CGL LANGUAGES C CXX VERSION 2020.0)
 
