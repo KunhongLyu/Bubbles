@@ -38,49 +38,77 @@
             In rendering the bubbles for this project, we extended the HW3 code to incorporate physically accurate thin-film transmission and reflection. Our first step was to implement a helper function <code>thin_film_RT</code> to compute the intensities of light that are reflected and refracted by the bubble’s surface. We specified the film’s refractive index 𝑛<sub>𝑓</sub>, its thickness 𝑑, and the refractive index of air 𝑛<sub>0</sub>. Using these parameters, along with the light’s wavelength λ and incident angle 𝜃<sub>0</sub>, we first applied Snell’s law to calculate the film angle 𝜃<sub>𝑓</sub>.
         </p>
         <div class="eq">
-            n<sub>0</sub> · sin&nbsp;θ<sub>0</sub> = n<sub>f</sub> · sin&nbsp;θ<sub>f</sub><br>
-            cos&nbsp;θ<sub>f</sub> = √&nbsp;[ 1 − (n<sub>0</sub>/n<sub>f</sub>)<sup>2</sup> · (1 − cos<sup>2</sup>θ<sub>0</sub>) ].
+            \[
+            n_0 · sin θ_0 = n_f · sin θ_f
+            \]
+            \[
+            cos θ_f = √ [ 1 − (n_0/n_f)^2 · (1 − cos^2θ_0) ]
+            \]
         </div>
         <p>Phase thickness inside the film:</p>
         <div class="eq">
-            δ = (2π · n<sub>f</sub> · d · cos&nbsp;θ<sub>f</sub>) / λ,
+            \[δ = (2π · n_f · d · cos θ_f) / λ\]
         </div>
 
         <p>We then applied the following formulas to compute the Fresnel reflection (r) and transmission (t) amplitude coefficients for both s polarization (vertical) and p-polarization (parallel).</p>
         <div class="eq">
-            r<sub>01</sub><sup>s</sup> = ( n<sub>0</sub>cos&nbsp;θ<sub>0</sub> − n<sub>f</sub>cos&nbsp;θ<sub>f</sub> ) / ( n<sub>0</sub>cos&nbsp;θ<sub>0</sub> + n<sub>f</sub>cos&nbsp;θ<sub>f</sub> )<br>
-            r<sub>01</sub><sup>p</sup> = ( n<sub>f</sub>cos&nbsp;θ<sub>0</sub> − n<sub>0</sub>cos&nbsp;θ<sub>f</sub> ) / ( n<sub>f</sub>cos&nbsp;θ<sub>0</sub> + n<sub>0</sub>cos&nbsp;θ<sub>f</sub> )
+            \[
+            r_{01}^{s} = \frac{n_{0} \cos\theta_{0} - n_{f} \cos\theta_{f}}
+            {n_{0} \cos\theta_{0} + n_{f} \cos\theta_{f}}
+            \]
+            \[
+            r_{01}^{p} = \frac{n_{f} \cos\theta_{0} - n_{0} \cos\theta_{f}}
+            {n_{f} \cos\theta_{0} + n_{0} \cos\theta_{f}}
+            \]
         </div>
         <div class="eq">
-            t<sub>01</sub><sup>s</sup> = ( 2 n<sub>0</sub>cos&nbsp;θ<sub>0</sub> ) / ( n<sub>0</sub>cos&nbsp;θ<sub>0</sub> + n<sub>f</sub>cos&nbsp;θ<sub>f</sub> )<br>
-            t<sub>01</sub><sup>p</sup> = ( 2 n<sub>0</sub>cos&nbsp;θ<sub>0</sub> ) / ( n<sub>f</sub>cos&nbsp;θ<sub>0</sub> + n<sub>0</sub>cos&nbsp;θ<sub>f</sub> )
+            \[
+            t_{01}^{s} = \frac{ 2\,n_{0} \cos\theta_{0} }
+            { n_{0} \cos\theta_{0} + n_{f} \cos\theta_{f} }
+            \]
+            \[
+            t_{01}^{p} = \frac{ 2\,n_{0} \cos\theta_{0} }
+            { n_{f} \cos\theta_{0} + n_{0} \cos\theta_{f} }
+            \]
         </div>
         <p>The f|3 case is analogous for r<sub>12</sub><sup>⋅</sup>, t<sub>12</sub><sup>⋅</sup>.</p>
 
         <p>Finally, we applied the Airy closed-form solution to compute the final reflected and transmitted light intensities.</p>
         <p>The total amplitude reflection and transmission for the thin film (phase factor e<sup>iδ</sup>) are:</p>
         <div class="eq">
-            r<sub>tot</sub><sup>⋅</sup> = [ r<sub>01</sub><sup>⋅</sup> + r<sub>12</sub><sup>⋅</sup> · e<sup>i·2δ</sup> ] / [ 1 + r<sub>01</sub><sup>⋅</sup> r<sub>12</sub><sup>⋅</sup> · e<sup>i·2δ</sup> ]<br>
-            t<sub>tot</sub><sup>⋅</sup> = [ t<sub>01</sub><sup>⋅</sup> t<sub>12</sub><sup>⋅</sup> · e<sup>i·δ</sup> ] / [ 1 + r<sub>01</sub><sup>⋅</sup> r<sub>12</sub><sup>⋅</sup> · e<sup>i·2δ</sup> ].
+            \[
+            r_{tot}^{\cdot} = \frac{ r_{01}^{\cdot} + r_{12}^{\cdot} \, e^{i \, 2\delta} }
+            { 1 + r_{01}^{\cdot} r_{12}^{\cdot} \, e^{i \, 2\delta} }
+            \]
+            \[
+            t_{tot}^{\cdot} = \frac{ t_{01}^{\cdot} t_{12}^{\cdot} \, e^{i \, \delta} }
+            { 1 + r_{01}^{\cdot} r_{12}^{\cdot} \, e^{i \, 2\delta} }
+            \]
         </div>
         <p>Convert amplitude to power (intensity) and apply radiometric correction for transmission:</p>
         <div class="eq">
-            R<sup>⋅</sup> = | r<sub>tot</sub><sup>⋅</sup> |<sup>2</sup><br>
-            T<sup>⋅</sup> = ( n<sub>3</sub>cos&nbsp;θ<sub>3</sub> / ( n<sub>0</sub>cos&nbsp;θ<sub>0</sub> ) ) · | t<sub>tot</sub><sup>⋅</sup> |<sup>2</sup>.
+            \[
+            R^⋅ = | r_{tot}^⋅ |^2
+            \]
+            \[
+            T^⋅ = ( n_3cos θ_3 / ( n_0cos θ_0 ) ) · | t_{tot}^⋅ |^2
+            \]
         </div>
         <p>For unpolarized light, take the s/p average:</p>
         <div class="eq">
-            R = ½ ( R<sup>s</sup> + R<sup>p</sup> ), &nbsp;&nbsp;
-            T = ½ ( T<sup>s</sup> + T<sup>p</sup> ).
+            \[
+            R = ( R^s + R^p )/2, \quad
+            T = ( T^s + T^p )/2
+            \]
         </div>
         <p>After this the <code>thin_film_RT</code> can return the intensity ratio of the reflected light and the transmiited light compared to the incident light.</p>
 
         <section class="card">
             <h3>Delta BSDF Sampling</h3>
-            <p>To ensure our bubble bsdf rendering returns the correct color, we construct an RGB wavelength channel and use the helper function we just implemented to obtain the reflectance and transmittance for each RGB wavelength. We then use sRGB weights to calculate the reflected intensity (w<sub>R</sub>) and transmitted intensity (w<sub>T</sub>) perceived by the human eye. We then calculate the light reflection probability p<sub>R</sub> = w<sub>R</sub> / (w<sub>T</sub> + w<sub>R</sub>) and use it to determine whether the sample returns reflected or transmitted light.</p>
+            <p>To ensure our bubble bsdf rendering returns the correct color, we construct an RGB wavelength channel and use the helper function we just implemented to obtain the reflectance and transmittance for each RGB wavelength. We then use sRGB weights to calculate the reflected intensity \(w_R\) and transmitted intensity \(w_T\) perceived by the human eye. We then calculate the light reflection probability \(p_R = w_R / (w_T + w_R)\) and use it to determine whether the sample returns reflected or transmitted light.</p>
             <ul>
-                <li><b>Reflection geometry</b>: perfect mirror (local reflection). &nbsp;f<sub>refl</sub> = ( R<sub>rgb</sub> · p<sub>R</sub> ) / |cos&nbsp;θ<sub>i</sub>|.</li>
-                <li><b>Transmission geometry</b>: for a single-sided thin film, approximate as straight-through (local ω<sub>i</sub> = −ω<sub>o</sub>). &nbsp;f<sub>trans</sub> = ( T<sub>rgb</sub> · p<sub>T</sub> ) / |cos&nbsp;θ<sub>i</sub>|.</li>
+                <li><b>Reflection geometry</b>: perfect mirror (local reflection). \(f_{refl} = ( R_{rgb} · p_R) / |cos θ_i|\).</li>
+                <li><b>Transmission geometry</b>: for a single-sided thin film, approximate as straight-through (local \(ω_i = −ω_o\)). &nbsp;\(f_{trans} = ( T_{rgb} · p_T ) / |cos θ_i|\).</li>
             </ul>
         </section>
 
@@ -100,7 +128,7 @@
         </div>
 
         <h2> Skybox </h2>
-        <p>To enhance visual richness and avoid a monotonous background, we implemented a skybox so that bubbles could reflect and refract more varied and realistic colors instead of appearing in a blank scene. We loaded six images, each mapped to one face of the cube, forming a complete surrounding environment. In the view matrix, we set <code>v(0,3) = v(1,3) = v(2,3) = 0</code>to remove translation while preserving rotation, ensuring that the cube remains stationary relative to the camera and appears infinitely distant.</p>
+        <p>To enhance visual richness and avoid a monotonous background, we implemented a skybox so that bubbles could reflect and refract more varied and realistic colors instead of appearing in a blank scene. We loaded six images, each mapped to one face of the cube, forming a complete surrounding environment. In the view matrix, we set \(v(0,3) = v(1,3) = v(2,3) = 0\) to remove translation while preserving rotation, ensuring that the cube remains stationary relative to the camera and appears infinitely distant.</p>
         <p>For path tracing, we created a <code>PathtracingSkybox::sample</code> method that takes a normalized direction vector as input, determines which cube face this direction intersects, converts it to 2D texture coordinates, and returns the corresponding pixel color from that face. This method enabling the path tracer to return accurate background colors when rays miss all geometry.</p>
 
         <div style="display: flex; flex-direction: column; align-items: center;">
