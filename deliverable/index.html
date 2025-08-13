@@ -1,4 +1,4 @@
-﻿<html>
+<html>
 <head>
     <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=default'></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
@@ -32,335 +32,213 @@
 
         <h2>Overview</h2>
         In this project, we aim to create a realistic soap bubble simulation and render the characteristic iridescent surface
-         appearance. This problem is important for applications in animations, films, video games, virtual reality experiences, and 
-         scientific simulations. 
-        Our approach is inspired by A Hyperbolic Geometric Flow for Evolving Films 
-         and Foams (Ishida et al., 2017), 
-         implementing thin-film dynamics to model bubble behavior.
-        
+        appearance. This problem is important for applications in animations, films, video games, virtual reality experiences, and
+        scientific simulations.
+        Our approach is inspired by A Hyperbolic Geometric Flow for Evolving Films
+        and Foams (Ishida et al., 2017),
+        implementing thin-film dynamics to model bubble behavior.
+
 
         <h2>Setup of the Environement</h2>
-            We extended the CS184 pathtracer framework to create our bubble simulation system, with a custom class <code>BubbleHGF</code> that 
-            connects the bubble physics with a HalfedgeMesh structure.
-            We setup a dual rendering pipeline: 
-            <ul>
-                <li>A real-time OpenGL viewer for interactive simulation updates and debugging (with wireframe visualization via the <code>m</code> key)</li>
-                <li>A high-quality ray tracer for photorealistic output, capturing iridescence through spectral rendering.</li>
-            </ul>
-            The simulation takes .dae meshes as input, evolves bubble geometry using forward kinematics,
-             and exports rendered frames for video synthesis. For final output, we batch-render frames at 32 samples 
-             per pixel (spp) in 480×360 resolution, combining them into a video sequence.
+        We extended the CS184 pathtracer framework to create our bubble simulation system, with a custom class <code>BubbleHGF</code> that
+        connects the bubble physics with a HalfedgeMesh structure.
+        We setup a dual rendering pipeline:
+        <ul>
+            <li>A real-time OpenGL viewer for interactive simulation updates and debugging (with wireframe visualization via the <code>m</code> key)</li>
+            <li>A high-quality ray tracer for photorealistic output, capturing iridescence through spectral rendering.</li>
+        </ul>
+        The simulation takes .dae meshes as input, evolves bubble geometry using forward kinematics, and exports rendered frames for video synthesis.
+        For final output, we batch-render frames at 32 samples per pixel (spp) in 480x360 resolution, combining them into a video sequence.
 
-
-
-        <h2>Forward Kinematics and Velocity Update</h2>
+        <h2>Simulation</h2>
+        <h3>Theory</h3>
         <p>
-            This simulation models soap bubble films as a dynamic mesh evolving under surface tension forces.
-            The key insight is that the three well-known geometric perspectives (mean curvature, Laplacian smoothing, and the functional derivative of the area functional) 
-            are mathematically equivalent under this context: 
-            The mean curvature flow guide how the surface shrink and smooth out, mirroring how surface tension 
-            minimizes film's surface area. 
-            Computationally, this behavior can be modeled using the cotangent-weighted Laplacian,
-            which applies smoothing forces based on the shape of the mesh. 
-            Mathematically, these forces also come from the gradient of the surface area, with cotangent weights
-             appearing through energy discretization. 
+            Bubbles are governed by the Navier-Stokes equation, since they are ultimately fluids.
+            However, because bubbles are extremely thin, surface tension becomes the dominant force.
+            Accurately resolving surface tension effects in the Navier-Stokes framework requires an extremely fine computational grid, which is impractical.
+            Therefore, an alternative modeling approach is needed.
         </p>
         <p>
-            To simluate film movement over time, we uses forward kinematics
-            step that updates vertex positions from their velocities and computes
-            new velocities from Laplacian-derived forces.
-            This implementation requires three main components: a mass matrix  \( M \), 
-            a Laplacian matrix  \( L \), and a position matrix  \( X \).
+            The most intuitive physical model for a bubble film is Newton's second law \(F = M \ddot{x}\),
+            where the force \(F\) is proportional to the Laplace-Beltrami operator \(\Delta\) applied to the surface embedding, as it acts as a smoothing operator to model surface tension.
         </p>
         <p>
-            Let \( n \) denote the number of vertices the system have. Each vertex <code>i</code> has position \( \mathbf{p}_i \)
-            and velocity \( \mathbf{v}_i \).
+            Another point of view is from variational mechanics, where the equilibrium (stationary) shape of a soap bubble is the solution to
+            minimizing surface area \(A[x]\) while preserving the enclosed volume of air.
+            Hence it is natural that the bubble's force to be driven towards this solution, we let \(\ddot{x}=\text{d}A/\text{d}x\) which is the functional derivative.
+            In differential geometry, the variation of \(A[x]\) is also equivalent to the mean curvature vector \(H {\bf n}\),
+            and the identity \(\Delta x = 2H{\bf n}\) shows the equivalence of the three different interpretations of the physical model.
+        </p>
+        <p>
+            The interpretation of mean curvature and Laplace operator allows us to discretize the operator into well known matrices, and the interpretation of area functional is important for proving the correctness of this formulation.
         </p>
 
-        <h3>Mass Matrix</h3>
+        <h3>Forward Kinematics and Velocity Update</h3>
         <p>
-            We compute a diagonal inverse mass matrix \( \mathbf{M}^{-1} \)
-            using barycentric area distribution. For a triangular face with
-            vertices <code>i,j,k</code>, the area contribution is
+            Since \(F = M \ddot{x}=\Delta x\), the partial differential equation we need to solve is \(\ddot{x}=M^{-1}\Delta x\).
+            Then, we discretize the surface using a triangular mesh, and we discretize each term on the right as the following matrices:
         </p>
+        <ul>
+            <li>
+                <b>Mass Matrix</b> We let \(M\) to be a diagonal mass matrix defined using surface area.
+                Specifically, each vertex accumulate \(1/3\) of the surface area of each of the triangle its adjacent to.
+            </li>
+            <li>
+                <b>Cotangent Laplacian</b> it is well known that the discretization of \(\Delta\) is the cotangent-weighted Laplacian \(L\).            Assume \(i,j\) are two vertices on the surface connected by an edge, and \(\alpha,\beta\) are the angles opposite the edge in the two adjacent triangles, then the cotangent-weighted Laplacian \(L\) is defined as
+                <div class="eq">
+                    \[L_{ij} = \frac{1}{2} \left( \cot \alpha + \cot \beta \right),\quad L_{ii}=-\sum_{j\in N(i)}L_{ij}\]
+                </div>
+                where \(N(i)\) are all vertices connected to \(i\) through an edge.
+            </li>
+            <li>
+                <b>Position matrix</b> We discretize \(x\) using the triangular mesh by putting all vertex positions in different rows.
+            </li>
+        </ul>
+        Then, we apply a semi-implicit Euler's method for update: let \(X^t,V^t\) be the approximation of the surface and velocity at time \(t\), then
         <div class="eq">
-            \[ \text{share} = \big\|(\mathbf{p}_j - \mathbf{p}_i) \times (\mathbf{p}_k - \mathbf{p}_i)\big\|. \]
-        </div>
-        <p> Each vertex's mass is computed from the sum of one-third of the area of its incident triangles.The inverse mass matrix is computed as:</p>
-
-        <div class="eq">
-            \[ M_{ii}^{-1} = \frac{6}{\max(\text{mass}_i, \varepsilon)} \]
-        </div>
-
-
-        <p>
-            where \( \text{mass}_i \) is the sum of the areas of adjacent triangles.
-            The factor of 6 accounts for barycentric weighting:
-            each triangle contributes \( \frac{1}{3} \) of its area to each vertex,
-            and the area computation does not account the usual \( \frac{1}{2} \) factor,
-            hence resulting in an overestimation by a factor of 6.
-        </p>
-
-        <h3>Laplacian Matrix</h3>
-        <p>The Laplacian \( \mathbf{L} \) computes smoothing forces using cotangent weights for each edge.</p>
-        <p>
-            Cotangent weight for edge \((i, j)\) calculation let \(\alpha\) and \(\beta\) be the angles opposite the edge in the two adjacent triangles:
-            <div class="eq">
-                \[ w_{ij} = \frac{1}{2} \left( \cot \alpha + \cot \beta \right)\]
-            </div>
-        </p>
-
-        <p>Individual weights then are inserted symmetrically and diagonals (negative row sums) to ensure row sums are zero:</p>
-        <div class="eq">
-            \[ L_{ii} = -\sum_{j \in \mathcal{N}(i)} w_{ij}. \]
+            \[ \begin{align*}\mathbf{V}^{t + \Delta t} &= \mathbf{V}^t + \Delta t M^{-1}L\mathbf{X}^t \\ \mathbf{X}^{t + \Delta t} &= \mathbf{X}^t + \Delta t \mathbf{V}^{t + \Delta t} \end{align*}\]
         </div>
 
-        <h3>Velocity and Position Update</h3>
-        <p>We compute accelerations from the Laplacian acting on the position matrix \( \mathbf{X} \) and integrate velocities explicitly. Using timestep \( \Delta t \):</p>
-        <div class="eq">
-            \[ \mathbf{a} = \mathbf{M}^{-1} \mathbf{L} \mathbf{X} \]
-        </div>
-        <div class="eq">
-            \[ \mathbf{V}(t + \Delta t) = \mathbf{V}(t) + \Delta t \, \mathbf{a} \]
-        </div>
-        <div class="eq">
-            \[ \mathbf{X}(t + \Delta t) = \mathbf{X}(t) + \Delta t \, \mathbf{V}(t + \Delta t) \]
-        </div>
+
+        <h3>Volume correction</h3>
         <p>
-            In this explicit Euler process, velocity is updated based on the current acceleration, and the
-            position is then integrated forward using the updated velocity.
-        </p>
-        <p>
-        To maintain physically realistic bubble behavior, we enforce <strong>volume conservation</strong> through a correction step <code>correctVolume()</code>.
-        After each position update, we compute the current bubble volume and apply a uniform scaling about the center of mass:
+            This process, even in continuous form, does not preserve energy, thus we have to perform volume correction step <code>correctVolume()</code> after each iteration.
+            We do this by computing the current bubble volume and apply a uniform scaling about the center of mass.
+            Specifically, we define
         </p>
 
         <div class="eq">
-        \[
-        \text{scale} = \left( \frac{V_{\text{target}}}{V_{\text{current}}} \right)^{1/3}
-        \]
-        </div>
-
-        <p>
-        The correction process involves:
-        </p>
-
-        <ol>
-        <li>
-            Compute the bubble's center of mass:
             \[
+            \text{scale} = \left( \frac{V_{\text{target}}}{V_{\text{current}}} \right)^{1/3},\quad\quad
             \mathbf{c} = \frac{1}{n} \sum_{i=1}^{n} \mathbf{p}_i
             \]
-        </li>
-        <li>
-            Scale all vertices uniformly about <strong>c</strong>:
+        </div>
+        <p>
+            where \(\mathbf{p}_i\) is the location of the \(i\)th vertex, then the correction step is
+        </p>
+        <div class="eq">
             \[
             \mathbf{p}_i^{\text{new}} = \mathbf{c} + \text{scale} \cdot (\mathbf{p}_i - \mathbf{c})
             \]
-        </li>
-        </ol>
-
-        <p>
-        This correction preserves the bubble's shape while maintains the target bubble volume.
-        It runs everytime after each position update, but before any topology changes (remeshing).
-        </p>
-
-
-        <h2>Isotropic Remeshing with Velocity Update</h2>
-        <p>Forward kinematics steps could result in mesh 
-             irregularities, especially near poles where vertices may clusters. 
-             This happens because:
-             <ul>
-             <li>Pole Divergence: Vertices near poles experience higher curvature forces,
-                 causing them to accelerate faster and more clustered.</li>
-             <li>Edge Length Disparity: Some edges stretch too much (> 4L/3), while others 
-                shrink (< 4L/5), leading to poor mesh quality.</li>
-             </ul>
-            <div style="display: flex; gap: 1px; justify-content: center; margin: 20px 0;">
-            <img src="images/f1.png" style="width: 20%;">
-            <img src="images/f2.png" style="width: 20%;">
-            <img src="images/f3.png" style="width: 20%;">
-            <img src="images/f4.png" style="width: 20%;">
-            <img src="images/f5.png" style="width: 20%;">
-            <img src="images/f6.png" style="width: 20%;">
         </div>
+
+
+
+        <h3>Isotropic Remeshing</h3>
+        <p>
+            Forward kinematics steps could result in mesh
+            irregularities, especially near poles where vertices may clusters.
+            This happens because:
+            <ul>
+                <li>
+                    Pole Divergence: Vertices near poles experience higher curvature forces,
+                    causing them to accelerate faster and more clustered.
+                </li>
+                <li>
+                    Edge Length Disparity: Some edges stretch too much (> 4L/3), while others
+                    shrink (< 4L/5), leading to poor mesh quality.
+                </li>
+            </ul>
+            <div style="display: flex; gap: 1px; justify-content: center; margin: 20px 0;">
+                <img src="images/f1.png" style="width: 20%;">
+                <img src="images/f2.png" style="width: 20%;">
+                <img src="images/f3.png" style="width: 20%;">
+                <img src="images/f4.png" style="width: 20%;">
+                <img src="images/f5.png" style="width: 20%;">
+                <img src="images/f6.png" style="width: 20%;">
+            </div>
 
         <p style="text-align: center; font-style: italic; margin-top: -10px;">
             Forward kinematics over time: from left to right, frames show simulation steps at 0, 10, 20, 30, 40, 50 iterations.
         </p>
 
-        <p>To restore mesh uniformity, we apply isotropic remeshing, which adjusts 
-            edge lengths and redistributes vertices to maintain consistent triangle shapes and sizes.
+        <p>
+            In order to avoid irregularities, we apply isotropic remeshing.
+            Specifically, we iteratively apply the following steps:
         </p>
-            <h3>1. Tangential Smoothing</h3>
-            <p>Smooths the mesh while preserving volume by moving vertices 
-                tangentially to avoid normal displacement. The position update for each vertex is 
-                computed as:</p>
+        <ul>
+            <li>Split edges over 4/3rds mean edge length</li>
+            <li>Collapse edges less than 4/5ths mean edge length</li>
+            <li>Flip edges to improve vertex degree</li>
+            <li>Move vertice tangentially towards centroid</li>
+        </ul>
+        <p>
+            One important detail is that during topology change, we also need to update the velocity.
+            We do so by averaging or interpolating existing velocities using the barycentric mass from surface triangles.
+            Specifically, for a new vertex of edge split, its velocity is computed as
+            \[
+            \mathbf{v}_{\text{new}} = \frac{m_0\,\mathbf{v}_0 + m_1\,\mathbf{v}_1}{m_0 + m_1}
+            \]
+            where \(v_0,v_1\) are the velocities of each vertex of the edge and \(m_0,m_1\) are the mass.
+            Similarly, if we collapse an edge we use the same formula.
+        </p>
 
+        <p>Thus, we have the following full remeshing pipeline</p>
+        <ol>
+            <li>
+                Compute mean edge length
+            </li>
 
-                <div class="eq">
-    \[
-    \mathbf{p}_i^{\text{new}} = \mathbf{p}_i + \underbrace{(\mathbf{I} - \mathbf{n}_i \mathbf{n}_i^T)}_{\text{Tangent projection}} 
-    \left( \mathbf{p}_{\text{centroid}} - \mathbf{p}_i \right) \cdot w(d_i) \cdot \Delta t
-    \]
-</div>
-
-            <p>
-                where:
-                
+            <li>
+                Iterative remeshing (<em>outerIterations = 5</em>)<br>
+                For each outer iteration:
                 <ul>
-                    <li>\(\mathbf{n}_i\) is the vertex normal</li>
-                    <li>\(\ I - \mathbf{n}_i \mathbf{n}_i^T \) is the projection matrix that removes the normal component,
-                         equivalent to: 
-                         <div class="eq">
-                                <code> Vector3D tangentialUpdate = update - normal * normalComponent </code>
-                         </div> 
-</li>
-                    <li>\(w(d_i) = \min(0.5, \max(0.01, 6/d_i))\) is the degree-adaptive weight</li>
-                    <li>Velocity damping factor of 0.95 prevents oscillation</li>
+                    <li>Collapse edges shorter than a threshold (e.g. 0.8 &times; L).</li>
+                    <li>Split edges longer than a threshold (e.g. 1.33 &times; L).</li>
+                    <li>Flip all edges that decrease the total deviation from degree 6.</li>
+                    <li>Apply tangential smoothing for a small number of steps (e.g., 5) to relax vertex positions while minimizing normal displacement.</li>
                 </ul>
-                <p>
-                        After applying the tangential update, the vertex velocity is 
-                        recalculated based on the actual position change over the timestep:
-                        <div calss = "eq">
-                            \[
-    \mathbf{v}_i = \frac{(\mathbf{p}_{\text{new},i} - \mathbf{p}_{\text{old},i}) \cdot \text{damping}}{\Delta t}
-    \]
+            </li>
 
-                        </div>
-                </p>
-            </p>
+            <li>
+                Flag topology changed by setting <code>topologyUpdated = true</code> to trigger dependent systems to rebuild their representations<br>
+            </li>
+        </ol>
 
-            <h3>2. Edge Operations</h3>
+        <p>
+            Through this iterative process, we maintain mesh quality during dynamic simulation by periodically adjusting
+            edge lengths and redistributing vertices. The resulting mesh exhibits relatively uniform triangle sizes,
+            optimized vertex connectivity (with valence near 6), and evenly spaced vertices that preserve the original surface geometry.
+            All topological changes maintain physical consistency, enabling the simulation to continue seamlessly on the updated mesh
+            and preventing instability caused by degeneracies such as pole clustering or extreme edge disparities.
+        </p>
 
-             <p>
-            To maintain a uniform and well-conditioned mesh for bubble simulation, 
-            we perform three key edge operations: 
-            splitting long edges, collapsing short edges, and flipping 
-                edges for regularity.  
-           Together they prevent extreme variations in edge length, reduce degeneracies, and 
-            improve the overall mesh structure.
-             </p>
-                <h4> Edge Splitting </h4>
-            <p>
-                Splits the edges that has length exceeds the target threshold of 
-                \(\frac{4L}{3}\), where \(L\) is the mean edge length. We start with iterating all edges while recording those require splitting.
-                 Then for each edges that need processing, we
-                 inserts a new vertex at the midpoint between 
-                the two original vertices. The velocity of this new vertex is computed as 
-                a mass-weighted interpolation of its parent vertices:  
-                \[
-                \mathbf{v}_{\text{new}} = \frac{m_0\,\mathbf{v}_0 + m_1\,\mathbf{v}_1}{m_0 + m_1}
-                \]
-                The inverse mass of the new vertex is 
-                assigned as  
-                \[
-                m_{\text{new}}^{-1} = \frac{1}{m_0 + m_1}
-                \]
-            </p>
-                      
-
-            <h4>Collapsing Short Edges</h4>
-                <p>
-                    Collapse edges shorter than \(\frac{4L}{5}\) avoid overly dense vertex clustering. When such an 
-                    edge is collapsed, the two endpoints are replaced by a single vertex positioned 
-                    at their midpoint. The velocity of the merged vertex is calculated using 
-                    the same momentum-preserving formula as in splitting:
-                    \[
-                    \mathbf{v}_{\text{new}} = \frac{m_0\,\mathbf{v}_0 + m_1\,\mathbf{v}_1}{m_0 + m_1}.
-                    \]
-                    After collapse, the surrounding edge lengths are recalculated and the 
-                    edges inside the priority queue are updated accordingly to avoid access to corrupted iterators.
-                </p>
-
-
-
-                <h3>Edge Flipping for Regular Vertex Degree</h3>
-                <p>To optimize mesh regularity and improve triangle quality, we implement an edge flipping operation base on valence. The 
-                    goal is to reduce any deviation from the ideal vertex degree of 6.</p>
-                <p>Each edge \( e \) shared by two triangles is evaluated using a valence metric:</p>
-                <div class="eq">\[E_{\text{valence}} = \sum_{v \in \{a_1, a_2, b_1, b_2\}} |d(v) - 6|\]</div>
-                <p>Here, \( a_1 \) and \( a_2 \) are the vertices of the current edge, and \( b_1 \), \( b_2 \) are the opposite vertices from the 
-                    adjacent triangles. The degrees \( d(v) \) is the number of edges incident to each vertex.</p>
-
-                <h4>Flip Condition</h4>
-                <p>An edge \( e = (a_1, a_2) \) is flipped to \( e' = (b_1, b_2) \) if the valence metric after flipping is sufficiently lower than before:</p>
-                <div class="eq">\[E_{\text{after}} + \epsilon < E_{\text{before}}\]</div>
-                <p>where \( \epsilon = 0.1 \) is a small threshold used to avoid unnecessary flip-flopping</p>
-
-                <h4>Smooth Geometry Preservation</h4>
-                <p>During topology changes, the positions of the flipped vertices \( b_1 \) and \( b_2 \) are smoothed by blending toward the midpoint of the original edge:</p>
-                <div class="eq">\[\begin{aligned}\mathbf{m} &= \tfrac{1}{2}(\mathbf{p}_{a_1} + \mathbf{p}_{a_2}) \\\mathbf{p}_{b_1} &\leftarrow (1 - \alpha)\mathbf{p}_{b_1} + \alpha \mathbf{m} \\\mathbf{p}_{b_2} &\leftarrow (1 - \alpha)\mathbf{p}_{b_2} + \alpha \mathbf{m}\end{aligned}\]</div>
-                <p>with blending factor \( \alpha = 0.1 \).</p>
-
-
-                <h3>3. Full Remeshing Pipeline </h3>
-                    <ol>
-                        <li>
-                            Compute mean edge length
-                        
-                        </li>
-
-                        <li>
-                            Iterative remeshing (<em>outerIterations = 5</em>)<br>
-                            For each outer iteration:
-                            <ul>
-                                <li>Collapse edges shorter than a threshold (e.g. 0.8 &times; L).</li>
-                                <li>Split edges longer than a threshold (e.g. 1.33 &times; L).</li>
-                                <li>Flip all edges that decrease the total deviation from degree 6.</li>
-                                <li>Apply tangential smoothing for a small number of steps (e.g., 5) to relax vertex positions while minimizing normal displacement.</li>
-                            </ul>
-                        </li>
-
-                        <li>
-                            Flag topology changed by setting <code>topologyUpdated = true</code> to trigger dependent systems to rebuild their representations<br>
-                        </li>
-                    </ol>
-
-            <p>
-                Through this iterative process, we maintain mesh quality during dynamic simulation by periodically adjusting 
-                edge lengths and redistributing vertices. The resulting mesh exhibits relatively uniform triangle sizes, 
-                optimized vertex connectivity (with valence near 6), and evenly spaced vertices that preserve the original surface geometry. 
-                All topological changes maintain physical consistency, enabling the simulation to continue seamlessly on the updated mesh 
-                and preventing instability caused by degeneracies such as pole clustering or extreme edge disparities.
-
-            </p>
-
-            <div style="display: flex; gap: 1px; justify-content: center; margin: 20px 0;">
+        <div style="display: flex; gap: 1px; justify-content: center; margin: 20px 0;">
             <img src="images/r1.png" style="width: 20%;">
             <img src="images/r2.png" style="width: 20%;">
             <img src="images/r3.png" style="width: 20%;">
             <img src="images/r4.png" style="width: 20%;">
             <img src="images/r5.png" style="width: 20%;">
 
-            </div>
-             <p style="text-align: center; font-style: italic; margin-top: -10px;">
+        </div>
+        <p style="text-align: center; font-style: italic; margin-top: -10px;">
             Forward kinematics over time with remeshing: from left to right, frames show simulation steps at 0, 20, 40, 60, and 80 iterations.
-         </p>
+        </p>
 
 
 
-        <h2>Bubble BSDF</h2>
-        <p class="muted">
+        <h2>Rendering</h2>
+        <h3>Physics</h3>
+        <p>
             In rendering the bubbles for this project, we extended the HW3 code to incorporate physically accurate thin-film transmission and reflection.
-            A bubble is essentially an extremely thin double surface. When light enters from one side, it can bounce back and forth between the two
-            interfaces. However, because the film is so thin, these internal reflections have little effect on the final exit direction of the light.
-            Therefore, we use Snell’s Law directly to determine the exit angle.
+            A bubble is essentially an extremely thin double surface.
+            When light enters from one side, it can bounce back and forth between the two interfaces.
+            However, because the film is so thin, these internal reflections have little effect on the final exit direction of the light.
+            Therefore, we use Snell��s Law directly to determine the exit angle.
         </p>
         <div class="eq">
             \[
-            n_0 · \sin \theta_0 = n_f · \sin \theta_f
+            n_0 \cdot \sin \theta_0 = n_f \cdot \sin \theta_f
             \]
             \[
-            \cos \theta_f = √ [ 1 − (n_0/n_f)^2 · (1 − \cos^2\theta_0) ]
+            \cos \theta_f = \sqrt{1 - (n_0/n_f)^2 \cdot (1 - \cos^2\theta_0)}
             \]
         </div>
 
 
         <p>
-            The internal bounces of light within the bubble require accurate physical modeling. This is achieved using Fresnel coefficients, which are
-            complex quantities that describe how the amplitude and phase of the electromagnetic field change for perpendicular and parallel polarizations
-            during a single reflection or transmission event.
+            The internal bounces of light within the bubble require accurate physical modeling.
+            This is achieved using Fresnel coefficients, which are complex quantities that describe how the amplitude and phase of the electromagnetic field change for perpendicular and parallel polarizations during a single reflection or transmission event.
         </p>
         <div class="eq">
             \[
@@ -382,56 +260,50 @@
             { n_{f} \cos\theta_{0} + n_{0} \cos\theta_{f} }
             \]
         </div>
-        <p>The f|3 case is analogous for r<sub>12</sub><sup>⋅</sup>, t<sub>12</sub><sup>⋅</sup>.</p>
+        <p>The f|3 case is analogous for \(r_{12}^*\), \(t_{12}^*\).</p>
         <p>
-            The above calculations assume that the Fresnel coefficients correspond only to phase shifts of 0° or 180°.
-            However, this simplification is insufficient for accurately simulating light behavior in thin films. To capture the true interference effects,
-            we must also account for the continuous phase change introduced by the optical path difference within the film. This is represented by the complex
-            factor \(e^{i\delta}\), where \(\delta\) is the phase thickness determined by the film’s refractive index, thickness, and the wavelength of light.
+            The above calculations assume that the Fresnel coefficients correspond only to phase shifts of \(0^\circ\) or \(180^\circ\).
+            However, this simplification is insufficient for accurately simulating light behavior in thin films. To capture the true interference effects, we must also account for the continuous phase change introduced by the optical path difference within the film.
+            This is represented by the complex factor \(e^{i\delta}\), where \(\delta\) is the phase thickness determined by the film's refractive index, thickness, and the wavelength of light.
         </p>
         <div class="eq">
-            \[\delta = (2\pi · n_f · d · \cos \theta_f) / \lambda\]
+            \[\delta = (2\pi \cdot n_f \cdot d \cdot \cos \theta_f) / \lambda\]
         </div>
         <p>
-            Using the computed Fresnel coefficients, we perform an Airy summation to account for the infinite series of reflections within the
-            thin film. Since each successive bounce is scaled by a constant complex factor (\(r_{01}r_{12}e^{i \, 2\delta}\)), this summation can be
+            Using the computed Fresnel coefficients, we perform an Airy summation to account for the infinite series of reflections within the thin film.
+            Since each successive bounce is scaled by a constant complex factor (\(r_{01}r_{12}e^{2i\delta}\)), this summation can be
             expressed as a geometric series, leading to the Airy closed-form solution.
         </p>
         <div class="eq">
             \[
-            r_{tot}^{\cdot} = \frac{ r_{01}^{\cdot} + r_{12}^{\cdot} \, e^{i \, 2\delta} }
-            { 1 + r_{01}^{\cdot} r_{12}^{\cdot} \, e^{i \, 2\delta} }
+            r_{tot}^* = \frac{ r_{01}^* + r_{12}^* \, e^{2i\delta} }
+            { 1 + r_{01}^* r_{12}^* \, e^{2i\delta} }
             \]
             \[
-            t_{tot}^{\cdot} = \frac{ t_{01}^{\cdot} t_{12}^{\cdot} \, e^{i \, \delta} }
-            { 1 + r_{01}^{\cdot} r_{12}^{\cdot} \, e^{i \, 2\delta} }
+            t_{tot}^* = \frac{ t_{01}^* t_{12}^* \, e^{i\delta} }
+            { 1 + r_{01}^* r_{12}^* \, e^{2i\delta} }
             \]
         </div>
         <p>
             From the total polarization amplitudes of reflection and transmission, we can compute the corresponding light intensities by taking
-            \(R^⋅ = | r_{tot}^⋅ |^2\) and \(T^⋅ = ( n_3\cos \theta_3 / ( n_0\cos \theta_0 ) ) · | t_{tot}^⋅ |^2\). Finally, assuming the incident light is
-            unpolarized, we obtain the final reflected and transmittedintensities by averaging the results for perpendicular (s) and parallel
-            (p) polarizations \(R = ( R^s + R^p )/2, \quad T = ( T^s + T^p )/2\).
+            \(R^* = | r_{tot}^* |^2\) and \(T^* = ( n_3\cos \theta_3 / ( n_0\cos \theta_0 ) ) \cdot | t_{tot}^* |^2\).
+            Finally, assuming the incident light is unpolarized, we obtain the final reflected and transmitted intensities by averaging the results for perpendicular (\(s\)) and parallel (\(p\)) polarizations \(R = ( R^s + R^p )/2, \quad T = ( T^s + T^p )/2\).
         </p>
 
 
-
-
-
-        <section class="card">
-            <h3>Delta BSDF Sampling</h3>
-            <p>
-                To ensure our bubble bsdf rendering returns the correct color, we construct an RGB wavelength channel and use the helper function we just
-                implemented to obtain the reflectance and transmittance for each RGB wavelength. We then use sRGB weights to calculate the reflected
-                intensity \(w_R\) and transmitted intensity \(w_T\) perceived by the human eye. We then calculate the light reflection probability
-                \(p_R = w_R / (w_T + w_R)\) and use it to determine whether the sample returns reflected or transmitted light.
-            </p>
-            <ul>
-                <li><b>Reflection geometry</b>: perfect mirror (local reflection). \(f_{refl} = ( R_{rgb} · p_R) / |\cos \theta_i|\).</li>
-                <li><b>Transmission geometry</b>: for a single-sided thin film, approximate as straight-through (local 
-                \(\omega_i = −\omega_o\)). &nbsp;\(f_{trans} = ( T_{rgb} · p_T ) / |\cos \theta_i|\).</li>
-            </ul>
-        </section>
+        <h3>Bubble BSDF</h3>
+        <p>
+            The implementation of our bubble bsdf computes the following: we compute the reflectance and transmittance for each RGB wavelength,
+            then we use sRGB weights to calculate the reflected intensity \(w_R\) and transmitted intensity \(w_T\) perceived by the human eye.
+            Finally, we calculate the light reflection probability \(p_R = w_R / (w_T + w_R)\) to randomly choose the current light ray to be reflected or transmitted, effectively simulating both with just one ray.
+        </p>
+        <ul>
+            <li><b>Reflection</b>: perfect mirror (locally reflect). \(f_{refl} = ( R_{rgb} \cdot p_R) / |\cos \theta_i|\).</li>
+            <li>
+                <b>Transmission</b>: for a single-sided thin film, approximate as straight-through (locally
+                \(\omega_i = -\omega_o\)) and \(f_{trans} = ( T_{rgb} \cdot p_T ) / |\cos \theta_i|\).
+            </li>
+        </ul>
 
         <div style="display: flex; flex-direction: column; align-items: center;">
 
@@ -448,14 +320,49 @@
             </table>
         </div>
 
-        <h2> Skybox </h2>
-        <p>To enhance visual richness and avoid a monotonous background, we implemented a skybox so that bubbles could reflect and refract more varied 
-        and realistic colors instead of appearing in a blank scene. We loaded six images, each mapped to one face of the cube, forming a complete 
-        surrounding environment. In the view matrix, we set \(v(0,3) = v(1,3) = v(2,3) = 0\) to remove translation while preserving rotation, ensuring 
-        that the cube remains stationary relative to the camera and appears infinitely distant.</p>
-        <p>For path tracing, we created a <code>PathtracingSkybox::sample</code> method that takes a normalized direction vector as input, determines 
-        which cube face this direction intersects, converts it to 2D texture coordinates, and returns the corresponding pixel color from that face. 
-        This method enabling the path tracer to return accurate background colors when rays miss all geometry.</p>
+        <h3> Skybox </h3>
+        <p>
+            To enhance visual richness and avoid a monotonous background, we implemented a skybox so that bubbles could reflect and refract more varied  and realistic colors instead of appearing in a blank scene.
+            We loaded six images, each mapped to one face of the cube, forming a complete surrounding environment.
+        </p>
+        <div style="display: flex; flex-direction: column; align-items: center;">
+
+            <table style="width: 100%; text-align: center; border-collapse: collapse;">
+                <tr>
+                    <td style="text-align: center;">
+                        <img src="images/pinksky/px.png" width="150px" />
+                        <figcaption>\(+x\) direction</figcaption>
+                    </td>
+                    <td style="text-align: center;">
+                        <img src="images/pinksky/nx.png" width="150px" />
+                        <figcaption>\(-x\) direction</figcaption>
+                    </td>
+                    <td style="text-align: center;">
+                        <img src="images/pinksky/py.png" width="150px" />
+                        <figcaption>\(+y\) direction</figcaption>
+                    </td>
+                    <td style="text-align: center;">
+                        <img src="images/pinksky/ny.png" width="150px" />
+                        <figcaption>\(-y\) direction</figcaption>
+                    </td>
+                    <td style="text-align: center;">
+                        <img src="images/pinksky/pz.png" width="150px" />
+                        <figcaption>\(+z\) direction</figcaption>
+                    </td>
+                    <td style="text-align: center;">
+                        <img src="images/pinksky/nz.png" width="150px" />
+                        <figcaption>\(-z\) direction</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <p>
+            In the view matrix, we set \(v(0,3) = v(1,3) = v(2,3) = 0\) to remove translation while preserving rotation, ensuring that the cube remains stationary relative to the camera and appears infinitely distant.
+        </p>
+        <p>
+            For path tracing, we created a <code>PathtracingSkybox::sample</code> method that takes a normalized direction vector as input, determines which cube face this direction intersects, converts it to 2D texture coordinates, and returns the corresponding pixel color from that face.
+            This method enabling the path tracer to return accurate background colors when rays miss all geometry.
+        </p>
 
         <div style="display: flex; flex-direction: column; align-items: center;">
 
@@ -473,17 +380,23 @@
         </div>
 
 
-         <h2>Optimization</h2>
-         <p>We used a Mesh Capture Optimization System to 
-            intelligently manage mesh data updates while minimizing computational overhead for both real-time OpenGL 
-            rendering and offline path tracing. The optimization strategy includes: </p>
-            <ol>
-                <li>Uses state flags (topologyUpdated and verticesUpdated) to determine the minimal required updates: only rebuild 
-                     when connectivity 
-                    changes otherwise handle vertices update though partial refresh</li>
-                <li>Material Reuse: All triangles share one BubbleBSDF material, saving memory and keeping shading consistent.</li>
+        <h2>Implementation Details</h2>
+        <p>
+            For modularity, the bubble class is an abstract class that's able to return a path-tracable object and able to step forward by an amount of time.
+            We also used a Mesh Capture Optimization System to
+            intelligently manage mesh data updates while minimizing computational overhead for both real-time OpenGL
+            rendering and offline path tracing.
+            The optimization strategy includes:
+        </p>
+        <ol>
+            <li>
+                Uses state flags (topologyUpdated and verticesUpdated) to determine the minimal required updates: only rebuild
+                when connectivity
+                changes otherwise handle vertices update though partial refresh
+            </li>
+            <li>Material Reuse: All triangles share one BubbleBSDF material, saving memory and keeping shading consistent.</li>
 
-                </ol>
+        </ol>
 
         <h2>Conclusion $ Future Work</h2>
         <h2>Reference</h2>
