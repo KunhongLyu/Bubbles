@@ -184,8 +184,9 @@ namespace CGL {
             }*/
 
             double adaptiveWeight = weight * (6.0 / v->degree());
-            adaptiveWeight = clamp(adaptiveWeight, 0.01, 0.5);
+            //adaptiveWeight = clamp(adaptiveWeight, 0.01, 0.5);
             Vector3D oldPos = v->position;
+
             Vector3D update = v->newPosition - oldPos;
             v->computeNormal();
             Vector3D normal = v->normal; 
@@ -197,8 +198,10 @@ namespace CGL {
             Vector3D positionChange = v->position - oldPos;
 
             size_t vertex_idx = vidx[&(*v)];
-            V.row(vertex_idx) = Eigen::RowVector3d(positionChange.x, positionChange.y, positionChange.z)/dt;
-			V.row(vertex_idx) *= 0.9999999; // dampen the velocity a bit
+           
+
+            V.row(vertex_idx) = V.row(vertex_idx) * 0.7 +  Eigen::RowVector3d(positionChange.x, positionChange.y, positionChange.z)/dt;
+			//V.row(vertex_idx) *= 0.95; // dampen the velocity a bit
         }
     }
 
@@ -486,16 +489,6 @@ namespace CGL {
         }
         return success;
     }
-
-
-
-
-
-
-
-
-
-
 
 
 
