@@ -45,7 +45,7 @@
             Computationally, this behavior can be modeled using the cotangent-weighted Laplacian,
             which applies smoothing forces based on the shape of the mesh. 
             Mathematically, these forces also come from the gradient of the surface area, with cotangent weights
-             appearing through proper energy discretization. 
+             appearing through energy discretization. 
         </p>
         <p>
             To simluate film movement over time, we uses forward kinematics
@@ -86,13 +86,13 @@
         <h3>Laplacian Matrix</h3>
         <p>The Laplacian \( \mathbf{L} \) computes smoothing forces using cotangent weights for each edge.</p>
         <p>
-            Cotangent weight for edge \((i, j)\) calculation where \(\alpha\) and \(\beta\) are the angles opposite the edge in the two adjacent triangles.:
+            Cotangent weight for edge \((i, j)\) calculation let \(\alpha\) and \(\beta\) be the angles opposite the edge in the two adjacent triangles:
             <div class="eq">
                 \[ w_{ij} = \frac{1}{2} \left( \cot \alpha + \cot \beta \right)\]
             </div>
         </p>
 
-        <p>Individual weights then are inserted symmetrically and diagonals ensure row sums are zero:</p>
+        <p>Individual weights then are inserted symmetrically and diagonals (negative row sums) to ensure row sums are zero:</p>
         <div class="eq">
             \[ L_{ii} = -\sum_{j \in \mathcal{N}(i)} w_{ij}. \]
         </div>
@@ -113,7 +113,7 @@
             position is then integrated forward using the updated velocity.
         </p>
         <p>
-        To maintain physically realistic bubble behavior, we enforce <strong>volume conservation</strong> through correction step.
+        To maintain physically realistic bubble behavior, we enforce <strong>volume conservation</strong> through a correction step <code>correctVolume()</code>.
         After each position update, we compute the current bubble volume and apply a uniform scaling about the center of mass:
         </p>
 
@@ -212,16 +212,16 @@
              <p>
             To maintain a uniform and well-conditioned mesh for bubble simulation, 
             we perform three key edge operations: 
-            <em>splitting long edges</em>, <em>collapsing short edges</em>, and <em>flipping 
-                edges for regularity</em>.  
+            splitting long edges, collapsing short edges, and flipping 
+                edges for regularity.  
            Together they prevent extreme variations in edge length, reduce degeneracies, and 
             improve the overall mesh structure.
              </p>
                 <h4> Edge Splitting </h4>
             <p>
-                Splitting splits the edges that has length exceeds the target threshold of 
-                \(\frac{4L}{3}\), where \(L\) is the mean edge length. We start with iterating all edges and 
-                identifying such edges. We call the splitedge method in the halfedgeMesh class, which
+                Splits the edges that has length exceeds the target threshold of 
+                \(\frac{4L}{3}\), where \(L\) is the mean edge length. We start with iterating all edges while recording those require splitting.
+                 Then for each edges that need processing, we
                  inserts a new vertex at the midpoint between 
                 the two original vertices. The velocity of this new vertex is computed as 
                 a mass-weighted interpolation of its parent vertices:  
@@ -238,8 +238,7 @@
 
             <h4>Collapsing Short Edges</h4>
                 <p>
-                    Collapse operations collapse edges shorter than \(\frac{4L}{5}\) to remove 
-                    degenerate geometry and avoid overly dense vertex clustering. When such an 
+                    Collapse edges shorter than \(\frac{4L}{5}\) avoid overly dense vertex clustering. When such an 
                     edge is collapsed, the two endpoints are replaced by a single vertex positioned 
                     at their midpoint. The velocity of the merged vertex is calculated using 
                     the same momentum-preserving formula as in splitting:
@@ -247,64 +246,62 @@
                     \mathbf{v}_{\text{new}} = \frac{m_0\,\mathbf{v}_0 + m_1\,\mathbf{v}_1}{m_0 + m_1}.
                     \]
                     After collapse, the surrounding edge lengths are recalculated and the 
-                    priority queue of candidate edges is updated to ensure consistency.
+                    edges inside the priority queue are updated accordingly to avoid access to corrupted iterators.
                 </p>
 
-                    <h3>Edge Flipping for Regular Vertex Degree</h3>
-            <p>To optimize mesh connectivity and improve triangle quality, we implement a valence-aware edge flipping operation. The goal is to reduce deviation from the ideal vertex degree of 6 (for interior vertices), which promotes regularity and stability in the mesh.</p>
-            <p>Each edge \( e \) shared by two triangles is evaluated using a valence energy metric:</p>
-            <div class="eq">\[E_{\text{valence}} = \sum_{v \in \{a_1, a_2, b_1, b_2\}} |d(v) - 6|\]</div>
-            <p>Here, \( a_1 \) and \( a_2 \) are the vertices of the current edge, and \( b_1 \), \( b_2 \) are the opposite vertices from the adjacent triangles. The degrees \( d(v) \) represent the number of edges incident to each vertex.</p>
-
-            <h4>Flip Condition</h4>
-            <p>An edge \( e = (a_1, a_2) \) is flipped to \( e' = (b_1, b_2) \) if the valence energy after flipping is sufficiently lower than before:</p>
-            <div class="eq">\[E_{\text{after}} + \epsilon < E_{\text{before}}\]</div>
-            <p>where \( \epsilon = 0.1 \) is a small hysteresis threshold used to prevent flip-flop oscillations.</p>
-
-            <h4>Smooth Geometry Preservation</h4>
-            <p>To maintain surface smoothness during topology changes, the positions of the flipped vertices \( b_1 \) and \( b_2 \) are blended toward the midpoint of the original edge:</p>
-            <div class="eq">\[\begin{aligned}\mathbf{m} &= \tfrac{1}{2}(\mathbf{p}_{a_1} + \mathbf{p}_{a_2}) \\\mathbf{p}_{b_1} &\leftarrow (1 - \alpha)\mathbf{p}_{b_1} + \alpha \mathbf{m} \\\mathbf{p}_{b_2} &\leftarrow (1 - \alpha)\mathbf{p}_{b_2} + \alpha \mathbf{m}\end{aligned}\]</div>
-            <p>with blending factor \( \alpha = 0.1 \).</p>
 
 
-                <h2>3. Full Remeshing Pipeline (<code>regularizeMesh</code>)</h2>
+                <h3>Edge Flipping for Regular Vertex Degree</h3>
+                <p>To optimize mesh regularity and improve triangle quality, we implement an edge flipping operation base on valence. The 
+                    goal is to reduce any deviation from the ideal vertex degree of 6.</p>
+                <p>Each edge \( e \) shared by two triangles is evaluated using a valence metric:</p>
+                <div class="eq">\[E_{\text{valence}} = \sum_{v \in \{a_1, a_2, b_1, b_2\}} |d(v) - 6|\]</div>
+                <p>Here, \( a_1 \) and \( a_2 \) are the vertices of the current edge, and \( b_1 \), \( b_2 \) are the opposite vertices from the 
+                    adjacent triangles. The degrees \( d(v) \) is the number of edges incident to each vertex.</p>
 
-<p><strong>Purpose:</strong> Integrates splitting, collapsing, flipping, and tangential smoothing to keep the mesh well-conditioned during evolution.</p>
+                <h4>Flip Condition</h4>
+                <p>An edge \( e = (a_1, a_2) \) is flipped to \( e' = (b_1, b_2) \) if the valence metric after flipping is sufficiently lower than before:</p>
+                <div class="eq">\[E_{\text{after}} + \epsilon < E_{\text{before}}\]</div>
+                <p>where \( \epsilon = 0.1 \) is a small threshold used to avoid unnecessary flip-flopping</p>
 
-<h3>Algorithm</h3>
-<ol>
-    <li>
-        <strong>Compute mean edge length</strong><br>
-        The target length <em>L</em> is the average edge length:
-        <br>
-        <code>
-            L = (1 / |E|) * Σ<sub>e=(i,j)∈E</sub> ||p<sub>i</sub> - p<sub>j</sub>||
-        </code>
-    </li>
+                <h4>Smooth Geometry Preservation</h4>
+                <p>During topology changes, the positions of the flipped vertices \( b_1 \) and \( b_2 \) are smoothed by blending toward the midpoint of the original edge:</p>
+                <div class="eq">\[\begin{aligned}\mathbf{m} &= \tfrac{1}{2}(\mathbf{p}_{a_1} + \mathbf{p}_{a_2}) \\\mathbf{p}_{b_1} &\leftarrow (1 - \alpha)\mathbf{p}_{b_1} + \alpha \mathbf{m} \\\mathbf{p}_{b_2} &\leftarrow (1 - \alpha)\mathbf{p}_{b_2} + \alpha \mathbf{m}\end{aligned}\]</div>
+                <p>with blending factor \( \alpha = 0.1 \).</p>
 
-    <li>
-        <strong>Iterative remeshing</strong> (<em>outerIterations = 5</em>)<br>
-        For each outer iteration:
-        <ul>
-            <li>Collapse edges shorter than a threshold (e.g., 0.8 &times; L).</li>
-            <li>Split edges longer than a threshold (e.g., 1.33 &times; L).</li>
-            <li>Apply tangential smoothing for a small number of steps (e.g., 5) to relax vertex positions while minimizing normal displacement.</li>
-        </ul>
-    </li>
 
-    <li>
-        <strong>Flag topology changed</strong><br>
-        After remeshing, set <code>topologyUpdated = true</code> so downstream systems know to refresh any derived data.
-    </li>
-</ol>
+                <h3>3. Full Remeshing Pipeline </h3>
+                    <ol>
+                        <li>
+                            Compute mean edge length
+                        
+                        </li>
 
-<p>
-    The remeshing pipeline combines local topology edits and geometry-aware smoothing to sustain mesh quality throughout dynamic simulation.
-    By using the mean edge length <em>L</em> as a moving target, the system collapses overly short edges and splits overly long ones so triangle sizes remain consistent.
-    Tangential smoothing redistributes vertices without significantly altering surface normals, while optional edge flips further regularize vertex valence.
-    Crucially, when topology changes occur, the implementation transfers velocities using mass-weighted interpolation, preserving momentum and preventing spurious kinetic artifacts.
-    The result is a robust, self-correcting loop: good geometry supports stable physics, and physically consistent updates guide appropriate remeshing, reducing degenerate elements and improving simulation reliability.
-</p>
+                        <li>
+                            Iterative remeshing (<em>outerIterations = 5</em>)<br>
+                            For each outer iteration:
+                            <ul>
+                                <li>Collapse edges shorter than a threshold (e.g. 0.8 &times; L).</li>
+                                <li>Split edges longer than a threshold (e.g. 1.33 &times; L).</li>
+                                <li>Flip all edges that decrease the total deviation from degree 6.</li>
+                                <li>Apply tangential smoothing for a small number of steps (e.g., 5) to relax vertex positions while minimizing normal displacement.</li>
+                            </ul>
+                        </li>
+
+                        <li>
+                            Flag topology changed by setting <code>topologyUpdated = true</code> to trigger dependent systems to rebuild their representations<br>
+                        </li>
+                    </ol>
+
+            <p>
+                Through this iterative process, we maintain mesh quality during dynamic simulation by periodically adjusting 
+                edge lengths and redistributing vertices. The resulting mesh exhibits relatively uniform triangle sizes, 
+                optimized vertex connectivity (with valence near 6), and evenly spaced vertices that preserve the original surface geometry. 
+                All topological changes maintain physical consistency, enabling the simulation to continue seamlessly on the updated mesh 
+                and preventing instability caused by degeneracies such as pole clustering or extreme edge disparities.
+              
+            
+            </p>
 
 
 
