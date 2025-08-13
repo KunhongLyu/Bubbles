@@ -224,7 +224,7 @@
             A bubble is essentially an extremely thin double surface.
             When light enters from one side, it can bounce back and forth between the two interfaces.
             However, because the film is so thin, these internal reflections have little effect on the final exit direction of the light.
-            Therefore, we use Snell��s Law directly to determine the exit angle.
+            Therefore, we use Snell��s Law directly to determine the exit angle.
         </p>
         <div class="eq">
             \[
@@ -399,10 +399,51 @@
         </ol>
 
         <h2>Conclusion and Future Work</h2>
-
-        <h2>Contribution</h2>
+              We successfully implemented a physically-based bubble
+               simulation and rendered 
+               its iridescent appearance through spectral path tracing. 
+                 Future work will pursue four key directions:  (1) implementing  
+                 collision detection that handles interactions with both rigid bodies 
+                 and fluid surfaces, (2) extending the system to model non-manifold bubble 
+                 clusters for realistic foam simulation, and (3) developmenting
+                interactive manipulation capabilities to allow user-directed bubble behaviors.
+       <h2>Contributions</h2>
+            <ul>
+                <li>
+                    <strong>Carl Sun</strong>: Project architecture, simulation, GUI development, and system integration
+                </li>
+                <li>
+                    <strong>Kunhong Lyu</strong>: BSDF and pathtracing implementation for iridescent bubble rendering
+                </li>
+                <li>
+                    <strong>Isabella Hu</strong>: Isotropic remeshing implementation 
+                </li>
+            </ul>
 
         <h2>Reference</h2>
+        <ul>
+            <li>
+                FIELD, D. A. 1988. Laplacian smoothing and delaunay triangulations. <i>International Journal for Numerical Methods in Biomedical Engineering</i> 4, 6, 709–712.
+            </li>
+            <li>
+                ALMGREN, F. J. AND TAYLOR, J. E. 1976. The geometry of soap films and soap bubbles. <i>Scientific American</i> 235, 82–93.
+            </li>
+            <li>
+                AMBROSIO, L. 2015. Regularity theory for mass-minimizing currents (after Almgren-De Lellis-Spadaro). <i>Calculus of Variations and Geometric Measure Theory</i>, 1–23.
+            </li>
+            <li>
+                ISHIDA, S., YAMAMOTO, M., ANDO, R., AND HACHISUKA, T. 2017. A Hyperbolic Geometric Flow for Evolving Films and Foams. <i>ACM Trans. on Graphics</i> 36, 6, 199:1–199:11.
+            </li>
+            <li>
+                WANG, M., DENG, Y., KONG, X., PRASAD, A. H., XIONG, S., AND ZHU, B. 2021. Thin-Film Smoothed Particle Hydrodynamics Fluid. <i>arXiv:2105.07656</i>.
+            </li>
+        </ul>
+
+        <h2>Presentation Materials</h2>
+        <p>
+            <a href="[https://docs.google.com/presentation/d/1vWlchWrzI12yybGUOTQqYMAIp8Z-WD4Kox5hhS7W0uI/edit?usp=sharing]">Project Slides</a> | 
+            <a href="[YOUR_YOUTUBE_LINK]">Demonstration Video</a>
+        </p>
 
 
 
