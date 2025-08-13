@@ -31,9 +31,27 @@
         <div style="text-align: center;">Names: Carl Sun, Isabella Hu, Kunhong Lyu</div>
 
         <h2>Overview</h2>
-        In this project, we aim to create a realistic soap bubble simulation, capturing their dynamic motion under surface tension and rendering their iconic iridescent, rainbow-like appearance with ray tracing based techniques.
+        In this project, we aim to create a realistic soap bubble simulation and render the characteristic iridescent surface
+         appearance. This problem is important for applications in animations, films, video games, virtual reality experiences, and 
+         scientific simulations. 
+        Our approach is inspired by A Hyperbolic Geometric Flow for Evolving Films 
+         and Foams (Ishida et al., 2017), 
+         implementing thin-film dynamics to model bubble behavior.
+        
 
         <h2>Setup of the Environement</h2>
+            We extended the CS184 pathtracer framework to create our bubble simulation system, with a custom class <code>BubbleHGF</code> that 
+            connects the bubble physics with a HalfedgeMesh structure.
+            We setup a dual rendering pipeline: 
+            <ul>
+                <li>A real-time OpenGL viewer for interactive simulation updates and debugging (with wireframe visualization via the <code>m</code> key)</li>
+                <li>A high-quality ray tracer for photorealistic output, capturing iridescence through spectral rendering.</li>
+            </ul>
+            The simulation takes .dae meshes as input, evolves bubble geometry using forward kinematics,
+             and exports rendered frames for video synthesis. For final output, we batch-render frames at 32 samples 
+             per pixel (spp) in 480×360 resolution, combining them into a video sequence.
+
+
 
         <h2>Forward Kinematics and Velocity Update</h2>
         <p>
@@ -158,13 +176,19 @@
              <li>Edge Length Disparity: Some edges stretch too much (> 4L/3), while others 
                 shrink (< 4L/5), leading to poor mesh quality.</li>
              </ul>
-            <div style="display: flex; gap: 10px; justify-content: center; margin: 20px 0;">
-            <img src="images/.png" style="width: 18%; border: 1px solid #ccc;">
-            <img src="images/.png" style="width: 18%; border: 1px solid #ccc;">
-            <img src="images/.png" style="width: 18%; border: 1px solid #ccc;">
-            <img src="images/.png" style="width: 18%; border: 1px solid #ccc;">
-            <img src="images/.png" style="width: 18%; border: 1px solid #ccc;">
-            </div>
+            <div style="display: flex; gap: 1px; justify-content: center; margin: 20px 0;">
+            <img src="images/f1.png" style="width: 20%;">
+            <img src="images/f2.png" style="width: 20%;">
+            <img src="images/f3.png" style="width: 20%;">
+            <img src="images/f4.png" style="width: 20%;">
+            <img src="images/f5.png" style="width: 20%;">
+            <img src="images/f6.png" style="width: 20%;">
+        </div>
+
+        <p style="text-align: center; font-style: italic; margin-top: -10px;">
+            Forward kinematics over time: from left to right, frames show simulation steps at 0, 10, 20, 30, 40, 50 iterations.
+        </p>
+
         <p>To restore mesh uniformity, we apply isotropic remeshing, which adjusts 
             edge lengths and redistributes vertices to maintain consistent triangle shapes and sizes.
         </p>
@@ -299,9 +323,20 @@
                 optimized vertex connectivity (with valence near 6), and evenly spaced vertices that preserve the original surface geometry. 
                 All topological changes maintain physical consistency, enabling the simulation to continue seamlessly on the updated mesh 
                 and preventing instability caused by degeneracies such as pole clustering or extreme edge disparities.
-              
-            
+
             </p>
+
+            <div style="display: flex; gap: 1px; justify-content: center; margin: 20px 0;">
+            <img src="images/r1.png" style="width: 20%;">
+            <img src="images/r2.png" style="width: 20%;">
+            <img src="images/r3.png" style="width: 20%;">
+            <img src="images/r4.png" style="width: 20%;">
+            <img src="images/r5.png" style="width: 20%;">
+
+            </div>
+             <p style="text-align: center; font-style: italic; margin-top: -10px;">
+            Forward kinematics over time with remeshing: from left to right, frames show simulation steps at 0, 20, 40, 60, and 80 iterations.
+         </p>
 
 
 
@@ -437,8 +472,22 @@
             </table>
         </div>
 
+
+         <h2>Optimization</h2>
+         <p>We used a Mesh Capture Optimization System to 
+            intelligently manage mesh data updates while minimizing computational overhead for both real-time OpenGL 
+            rendering and offline path tracing. The optimization strategy includes: </p>
+            <ol>
+                <li>Uses state flags (topologyUpdated and verticesUpdated) to determine the minimal required updates: only rebuild 
+                     when connectivity 
+                    changes otherwise handle vertices update though partial refresh</li>
+                <li>Material Reuse: All triangles share one BubbleBSDF material, saving memory and keeping shading consistent.</li>
+
+                </ol>
+
         <h2>Conclusion $ Future Work</h2>
         <h2>Reference</h2>
+
 
 
     </div>
