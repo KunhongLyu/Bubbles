@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.11)
 #set(CMAKE_PREFIX_PATH "C:/Users/isabe/Vcpkg/vcpkg/installed/x64-windows")
 #set(ZLIB_DIR "C:/Users/isabe/Vcpkg/vcpkg/installed/x64-windows/share/zlib")
 #find_package(ZLIB REQUIRED)
-set(CMAKE_PREFIX_PATH "C:/Users/isabe/Vcpkg/vcpkg/installed/x64-windows/share")
+#set(CMAKE_PREFIX_PATH "C:/Users/isabe/Vcpkg/vcpkg/installed/x64-windows/share")
 project(CGL LANGUAGES C CXX VERSION 2020.0)
 
 #-------------------------------------------------------------------------------
@@ -104,7 +104,7 @@ set(OpenGL_GL_PREFERENCE LEGACY)
 find_package(OpenGL REQUIRED)
 
 # Freetype
-set(CMAKE_PREFIX_PATH "C:/Users/isabe/Vcpkg/vcpkg/installed/x64-windows/share")
+#set(CMAKE_PREFIX_PATH "C:/Users/isabe/Vcpkg/vcpkg/installed/x64-windows/share")
 find_package(Freetype CONFIG REQUIRED)
 
 target_include_directories(CGL PRIVATE ${FREETYPE_INCLUDE_DIRS})

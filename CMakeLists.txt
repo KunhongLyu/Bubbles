@@ -22,10 +22,10 @@ endif()
 # Find Eigen (add this near other find_package calls)
 #-------------------------------------------------------------------------------
 #find_package(Eigen3 REQUIRED)
-set(CMAKE_PREFIX_PATH "C:/Users/isabe/Vcpkg/vcpkg/installed/x64-windows/share")
+#set(CMAKE_PREFIX_PATH "C:/Users/isabe/Vcpkg/vcpkg/installed/x64-windows/share")
 
-message(STATUS "Eigen3_DIR: ${Eigen3_DIR}")
 find_package(Eigen3 CONFIG REQUIRED)
+message(STATUS "Eigen3_DIR: ${Eigen3_DIR}")
 
 #-------------------------------------------------------------------------------
 # Build options
